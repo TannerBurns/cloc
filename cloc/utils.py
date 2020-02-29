@@ -1,4 +1,5 @@
 import json
+import inspect
 
 from typing import Any
 
@@ -28,18 +29,23 @@ def echoattr(cls, attribute: str, list_delimiter: str = '\n', name_only: bool = 
                 msg += f'{type(value).__name__!r} '
 
             if isinstance(value, dict):
-                msg += json.dumps(value, indent=2)
+                try:
+                    msg += json.dumps(value, indent=2)
+                except TypeError:
+                    msg += str(value)
             elif isinstance(value, (tuple, list)):
                 msg += list_delimiter.join((str(v) for v in value))
             else:
-                msg += str(value) if value else ''
+                msg += str(value)
 
         print(msg)
     else:
         print(f'Error: Unable to find attribute with name {attribute!r}')
 
-def listattrs(cls):
+def listattrs(cls, verbose:bool=False):
     for attr in dir(cls):
-        if not attr.startswith('__') and not attr.endswith('__'):
+        if isinstance(getattr(cls, attr),  (bytes, str, tuple, list, dict)):
+            if not verbose and (attr.startswith('__') and attr.endswith('__')):
+                continue
             echoattr(cls, attr, list_delimiter=', ')
 

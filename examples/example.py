@@ -1,6 +1,4 @@
-import sys
-from cloc import grp, cmd, opt, arg
-from cloc.utils import echoattr, listattrs
+from cloc import grp, cmd, opt, arg, mixins
 
 """Test  Code ->"""
 
@@ -9,9 +7,13 @@ def cli():
     """cli"""
     pass
 
-@grp('g2')
+@grp('nested')
 def group2():
     """group 2"""
+    pass
+
+@grp('permissions')
+def permission_group():
     pass
 
 @cmd('test')
@@ -22,7 +24,7 @@ def test(cmd1, opt1=None):
     print('#test_command')
     print(cmd1, str(opt1))
 
-class UserCmds(object):
+class UserCmds(mixins.List, mixins.Echo):
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -36,28 +38,27 @@ class UserCmds(object):
             print(', '.join(self.users))
 
 
-    @cmd('echo')
-    @arg('attribute', type=str, help='attribute value to echo')
-    def echo(self, attribute:str):
-        """echo command"""
-        print('#echo_command')
-        echoattr(self, attribute)
+class PermissionCmds(mixins.List, mixins.Echo):
 
-    @cmd('list')
-    def list(self):
-        """list command"""
-        print('#list_command')
-        listattrs(self)
+    """this class is going to inherit the List mixin which provides a generic list command"""
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 u = UserCmds(users=['user1', 'user2'])
 user2 = UserCmds(users=['user1', 'user2', 'user3'])
+perms = PermissionCmds(roles=['admin', 'user', 'dev'], services=['test_service1'])
 
 cli.add_command(u)
 cli.add_command(group2)
 
 group2.add_command(test)
 group2.add_command(user2)
+group2.add_command(permission_group)
+
+permission_group.add_command(perms)
 
 
 if __name__ == '__main__':
