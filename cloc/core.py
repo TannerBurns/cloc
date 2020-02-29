@@ -1,9 +1,11 @@
 import sys
 import re
+import inspect
 
 from typing import Any, Callable, NamedTuple, List, Union
 
 from cloc.utils import defaultattr
+from cloc.types import BaseParamType
 
 '''
 core
@@ -89,7 +91,7 @@ class Cmd(BaseCmd):
     def start(self, cmdl: list):
         self._parse(cmdl)
 
-        """FIGURE OUT HOW TO RECURSIVELY FIND THE CLASS OF THE COMMAND BEING CALLED IF ANY"""
+        # this should represent 'self' for the command about to start
         if self.dataclass:
             self.values.insert(0, self.dataclass)
 
@@ -147,24 +149,15 @@ class Cmd(BaseCmd):
             if hasattr(self.params, 'order'):
                 for p in reversed(self.params.order):
                     rgx_pattern = ''
-                    if isinstance(p, Arg):
-                        rgx_pattern += f'(.*) '
                     if isinstance(p, Opt):
                         rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
                         rgx_pattern += f'-{p.short_name.replace("-", "")}) ([\S]*)'
-                    if isinstance(p, Flg):
+                    elif isinstance(p, Flg):
                         rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
                         rgx_pattern += f'-{p.short_name.replace("-", "")})'
                     self.regex_patterns.insert(0, rgx_pattern)
 
     def get_params_values(self, cmdl: list):
-        """
-        example cmdl: arg1 --opt1 "hello world"
-        example: (.*) -\-opt1|o? (.*)
-
-
-        MEED TO FIX THIS, GETTING CLOSER - LEAVING OFF HERE
-        """
         if '--help' in cmdl:
             self._print_help()
         if hasattr(self, 'params') and hasattr(self.params, 'order'):
@@ -177,13 +170,23 @@ class Cmd(BaseCmd):
                         msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
                         raise TypeError(msg)
                     if cmdl[index]:
-                        self.values.append(cmdl[index])
+                        if 'builtins' == self.params.order[index].type.__class__.__module__:
+                            self.values.append(self.params.order[index].type(cmdl[index]))
+                        elif isinstance(self.params.order[index].type, BaseParamType):
+                            self.values.append(self.params.order[index].type.convert(cmdl[index]))
+                        else:
+                            self.values.append(cmdl[index])
                 if isinstance(self.params.order[index], Opt):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches:
                         for m in matches:
                             if m[1]:
-                                self.values.append(m[1])
+                                if 'builtins' == self.params.order[index].type.__class__.__module__:
+                                    self.values.append(self.params.order[index].type(m[1]))
+                                elif isinstance(self.params.order[index].type, BaseParamType):
+                                    self.values.append(self.params.order[index].type.convert(m[1]))
+                                else:
+                                    self.values.append(m[1])
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches:
