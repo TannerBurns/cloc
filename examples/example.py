@@ -17,11 +17,12 @@ def permission_group():
     pass
 
 @cmd('test')
-@arg('arg1', type=str, help='positional argument 1')
+@arg('arg1', type=int, help='positional argument 1')
 @opt('--opt1', '-o1', type=str, help='option 1')
 def test(cmd1, opt1=None):
     """test command"""
     print('#test_command')
+    print(type(cmd1), type(opt1))
     print(cmd1, str(opt1))
 
 class UserCmds(mixins.List, mixins.Echo):
