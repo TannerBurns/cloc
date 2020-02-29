@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
 
 setup(
     name='cloc',
-    version='0.0.6',
+    version='0.0.7',
     packages=find_packages(exclude=['examples']),
     include_package_data=True,
     description='Command Line Object Chaining (cloc) - Modern cli framework for simple and complex cli applications',

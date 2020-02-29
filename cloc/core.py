@@ -5,7 +5,7 @@ import inspect
 from typing import Any, Callable, NamedTuple, List, Union
 
 from cloc.utils import defaultattr
-from cloc.types import BaseParamType
+from cloc.types import BaseType
 
 '''
 core
@@ -157,6 +157,14 @@ class Cmd(BaseCmd):
                         rgx_pattern += f'-{p.short_name.replace("-", "")})'
                     self.regex_patterns.insert(0, rgx_pattern)
 
+
+    def _convert_type(self, value: Any, index: int):
+        if 'builtins' == self.params.order[index].type.__class__.__module__:
+            value = self.params.order[index].type(value)
+        elif isinstance(self.params.order[index].type, BaseType):
+            value = self.params.order[index].type.convert(value)
+        return value
+
     def get_params_values(self, cmdl: list):
         if '--help' in cmdl:
             self._print_help()
@@ -170,23 +178,13 @@ class Cmd(BaseCmd):
                         msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
                         raise TypeError(msg)
                     if cmdl[index]:
-                        if 'builtins' == self.params.order[index].type.__class__.__module__:
-                            self.values.append(self.params.order[index].type(cmdl[index]))
-                        elif isinstance(self.params.order[index].type, BaseParamType):
-                            self.values.append(self.params.order[index].type.convert(cmdl[index]))
-                        else:
-                            self.values.append(cmdl[index])
+                        self.values.append(self._convert_type(cmdl[index], index))
                 if isinstance(self.params.order[index], Opt):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches:
                         for m in matches:
                             if m[1]:
-                                if 'builtins' == self.params.order[index].type.__class__.__module__:
-                                    self.values.append(self.params.order[index].type(m[1]))
-                                elif isinstance(self.params.order[index].type, BaseParamType):
-                                    self.values.append(self.params.order[index].type.convert(m[1]))
-                                else:
-                                    self.values.append(m[1])
+                                self.values.append(self._convert_type(m[1], index))
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches:
