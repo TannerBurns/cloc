@@ -20,6 +20,17 @@ class Opt(object):
         defaultattr(self, 'type', type)
         defaultattr(self, 'help', help)
 
+class Flg(object):
+    name: str
+    short_name: str
+    help: str
+
+    def __init__(self, name: str, short_name: str, help: str= None):
+        defaultattr(self, 'name', name)
+        defaultattr(self, 'short_name', short_name)
+        defaultattr(self, 'help', help)
+        defaultattr(self, 'type', bool)
+
 class Arg(object):
     name: str
     type: Any
@@ -29,6 +40,7 @@ class Arg(object):
         defaultattr(self, 'name', name)
         defaultattr(self, 'type', type)
         defaultattr(self, 'help', help)
+
 
 class Params(NamedTuple):
     order: List[Union[Arg, Opt]]
@@ -121,6 +133,16 @@ class Cmd(BaseCmd):
                     if p.help:
                         paramstr += f'\t{p.help} '
                     paramstr += '\n'
+                if isinstance(p,  Flg):
+                    usagestr += f'{p.name}|{p.short_name} '
+                    paramstr += f'{type(p).__name__!r} '
+                    if p.type:
+                        paramstr += f'\t{p.type.__name__!r} (flag) '
+                    paramstr += f'\t{p.name} {p.short_name} '
+                    if p.help:
+                        paramstr += f'\t{p.help} '
+                    paramstr += '\n'
+
         usagestr += '\n'
         self.help = usagestr + docstr + paramstr
 
@@ -135,6 +157,9 @@ class Cmd(BaseCmd):
                     if isinstance(p, Opt):
                         rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
                         rgx_pattern += f'-{p.short_name.replace("-", "")}) ([\S]*)'
+                    if isinstance(p, Flg):
+                        rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
+                        rgx_pattern += f'-{p.short_name.replace("-", "")})'
                     self.regex_patterns.insert(0, rgx_pattern)
 
     def get_params_values(self, cmdl: list):
@@ -164,6 +189,10 @@ class Cmd(BaseCmd):
                         for m in matches:
                             if m[1]:
                                 self.values.append(m[1])
+                if isinstance(self.params.order[index], Flg):
+                    matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
+                    if matches:
+                        self.values.append(True)
 
 class Grp(BaseCmd):
     commands: List[Cmd]

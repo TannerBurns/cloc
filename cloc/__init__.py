@@ -1,1 +1,1 @@
-from cloc.decorators import grp, cmd, opt, arg
+from cloc.decorators import grp, cmd, opt, arg, flg

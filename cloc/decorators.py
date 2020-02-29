@@ -1,12 +1,21 @@
 
-from typing import Any
+from typing import Any, Callable, Union
 
-from cloc.core import Arg, Cmd, Grp, Opt, Params
+from cloc.core import Arg, Cmd, Grp, Opt, Flg, Params
 
 
 '''
 decorators
 '''
+
+def _create_cmd(name:str, fn:Callable, param:Union[Arg, Flg, Opt], hidden:bool=False):
+    if param:
+        cmd = Cmd(name, fn, params=Params([param]), hidden=hidden)
+    else:
+        cmd = Cmd(name, fn, hidden=hidden)
+    cmd.__doc__ = fn.__doc__
+    return cmd
+
 class opt(object):
 
     def __init__(self, name:str, short_name: str, type: Any= None, help: str= None):
@@ -17,9 +26,19 @@ class opt(object):
             f.params.order.insert(0, self.Opt)
             return f
         else:
-            cmd = Cmd(None, f, params=Params([self.Opt]))
-            cmd.__doc__ = f.__doc__
-            return cmd
+            return _create_cmd(None, f, self.Opt)
+
+class flg(object):
+
+    def __init__(self, name:str, short_name: str, help: str= None):
+        self.Flg = Flg(name, short_name, help)
+
+    def __call__(self, f):
+        if isinstance(f, Cmd):
+            f.params.order.insert(0, self.Flg)
+            return f
+        else:
+            return _create_cmd(None, f, self.Flg)
 
 class arg(object):
 
@@ -31,9 +50,7 @@ class arg(object):
             f.params.order.insert(0, self.Arg)
             return f
         else:
-            cmd = Cmd(None, f, params=Params([self.Arg]))
-            cmd.__doc__ = f.__doc__
-            return cmd
+            return _create_cmd(None, f, self.Arg)
 
 class cmd(object):
 
@@ -47,9 +64,7 @@ class cmd(object):
             f.hidden = self.hidden
             return f
         else:
-            c = Cmd(self.name, f, hidden=self.hidden)
-            c.__doc__ = f.__doc__
-            return c
+            return _create_cmd(None, f, None, hidden=self.hidden)
 
 class grp(object):
     def __init__(self, name:str = None):
