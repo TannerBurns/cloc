@@ -64,7 +64,7 @@ class cmd(object):
             f.hidden = self.hidden
             return f
         else:
-            return _create_cmd(None, f, None, hidden=self.hidden)
+            return _create_cmd(self.name, f, None, hidden=self.hidden)
 
 class grp(object):
     def __init__(self, name:str = None):
