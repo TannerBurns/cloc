@@ -8,39 +8,34 @@ from cloc.utils import defaultattr
 '''
 core
 '''
-class Opt(object):
-    name: str
-    short_name: str
-    type: Any
-    help: str
-
-    def __init__(self, name: str, short_name: str, type: Any= None, help: str= None):
-        defaultattr(self, 'name', name)
-        defaultattr(self, 'short_name', short_name)
-        defaultattr(self, 'type', type)
-        defaultattr(self, 'help', help)
-
-class Flg(object):
-    name: str
-    short_name: str
-    help: str
-
-    def __init__(self, name: str, short_name: str, help: str= None):
-        defaultattr(self, 'name', name)
-        defaultattr(self, 'short_name', short_name)
-        defaultattr(self, 'help', help)
-        defaultattr(self, 'type', bool)
-
-class Arg(object):
+class BaseArg(object):
     name: str
     type: Any
     help: str
 
-    def __init__(self, name: str, type: Any= None, help: str= None):
+    def __init__(self, name: str, type: Any = None, help: str = None):
         defaultattr(self, 'name', name)
         defaultattr(self, 'type', type)
         defaultattr(self, 'help', help)
 
+class Opt(BaseArg):
+    short_name: str
+
+    def __init__(self, name: str, short_name: str, type: Any = None, help: str = None):
+        super().__init__(name, type, help)
+        defaultattr(self, 'short_name', short_name)
+
+class Flg(BaseArg):
+    short_name: str
+
+    def __init__(self, name: str, short_name: str, help: str = None):
+        super().__init__(name, bool, help)
+        defaultattr(self, 'short_name', short_name)
+
+class Arg(BaseArg):
+
+    def __init__(self, name: str, type: Any = None, help: str = None):
+        super().__init__(name, type, help)
 
 class Params(NamedTuple):
     order: List[Union[Arg, Opt]]
@@ -112,7 +107,7 @@ class Cmd(BaseCmd):
     def create_help(self):
         docstr = f'\n{self.__doc__}\n\n'
         usagestr = f'\nUSAGE: {self.name} '
-        paramstr = f'Parameters\n{"="*48}\n'
+        paramstr = f'Parameters\n{"="*80}\n'
         if getattr(self, 'params'):
             for p in self.params.order:
                 if isinstance(p, Arg):
@@ -199,8 +194,8 @@ class Grp(BaseCmd):
     invoke: str
     cmdl: list
 
-    def __init__(self, name: str, commands: List[Cmd] = None):
-        super().__init__(name)
+    def __init__(self, name: str, commands: List[Cmd] = None, hidden:bool= False):
+        super().__init__(name, hidden=hidden)
         self.commands = defaultattr(self, 'commands', commands or [])
 
     def __call__(self, cmdl: list= None):
@@ -216,15 +211,19 @@ class Grp(BaseCmd):
         else:
             self._print_help()
 
-    def add_command(self, command: BaseCmd):
+    def add_command(self, command: BaseCmd, hidden:bool= None):
         if not isinstance(command, (Grp, Cmd)):
             # look for groups or commands in this class and make them dataclass commands
             for method_name in dir(command):
                 method = getattr(command, method_name)
                 if isinstance(method, (Grp, Cmd)):
                     cmd = method.new_dataclass_cmd(method.name, method.fn, method.params, method.hidden, command)
+                    if hidden:
+                        cmd.hidden = hidden
                     self.commands.append(cmd)
         else:
+            if hidden:
+                command.hidden = hidden
             self.commands.append(command)
 
     def get_command(self, name: str):
@@ -239,7 +238,7 @@ class Grp(BaseCmd):
     def create_help(self):
         docstr = f'\n{self.__doc__}\n\n'
         usagestr = '\nUSAGE: COMMAND [Arg|Opt] ...\n'
-        cmdstr = f'Commands:\n{"="*48}\n'
+        cmdstr = f'Commands:\n{"="*80}\n'
         if hasattr(self, 'commands'):
             for c in self.commands:
                 if not c.hidden:

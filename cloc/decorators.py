@@ -67,11 +67,12 @@ class cmd(object):
             return _create_cmd(self.name, f, None, hidden=self.hidden)
 
 class grp(object):
-    def __init__(self, name:str = None):
+    def __init__(self, name:str = None, hidden:bool = False):
         self.name = name
+        self.hidden  = hidden
 
     def __call__(self, f):
-        grp = Grp(self.name)
+        grp = Grp(self.name, hidden=self.hidden)
         grp.__doc__ = f.__doc__
         return grp
 
