@@ -48,7 +48,7 @@ $ pip3 install .
 ## Examples
 
 <a name="#simple_example"></a>
-###Simple example
+### Simple example
 ```python
 from cloc import cmd, grp, opt
 from cloc.types import IntRange
@@ -72,7 +72,7 @@ if __name__ == '__main__':
 ```
 
 <a name="#viewset_example"></a>
-###Using a viewset
+### Using a viewset
 ```python
 from cloc import grp
 from cloc.viewsets import ReqSessionViewset
@@ -102,7 +102,7 @@ $ python example3.py get https://jsonplaceholder.typicode.com/todos/1
 ```
 
 <a name="#queryset_example"></a>
-###Using a queryset
+### Using a queryset
 ```python
 from cloc import grp
 from cloc.viewsets import ReadOnlyViewset, GrpQueryset
