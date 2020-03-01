@@ -4,7 +4,7 @@ import json
 import io
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Union
 from cloc.utils import defaultattr
 
 """
@@ -59,24 +59,26 @@ class FileType(BaseType):
         self.fobj = open(filepath, 'r')
         return self.fobj
 
-class IntRange(BaseType):
+class IntRangeType(BaseType):
     __name__ = 'cloc.IntRange'
     basetype: int
 
-    def __init__(self, *args):
+    def __init__(self):
         super().__init__(int)
-        if len(args) == 1:
-            self.choices = list(range(args[0]))
-        elif len(args) == 2:
-            self.choices = list(range(args[0], args[1]))
-        else:
-            raise ValueError(f'{args!r} was not of length 1 or 2. No start or stop value found.')
 
-    def convert(self, value: str):
-        ival =int(value)
-        if ival not in self.choices:
-            raise ValueError(f'Error:{value!r} -> (int) {ival!r} was not found in choices: {", ".join(self.choices)!r}')
-        return ival
+    def convert(self, value: Union[str, int]):
+        if isinstance(value, str):
+            vals = value.split(',')
+            if len(vals) == 1:
+                return list(range(int(vals[0])))
+            elif len(vals) == 2:
+                return list(range(int(vals[0]), int(vals[1])))
+            else:
+                raise ValueError(f'Unable to find a start or stop value based on given: {value!r}')
+        elif isinstance(value, int):
+            return list(range(value))
+        else:
+            raise TypeError(f'{value!r} was {type(value).__name__!r} and not {"str"!r} or {"int"!r}')
 
 class DateType(BaseType):
     __name__ = 'cloc.Date'
@@ -148,3 +150,4 @@ Json = JsonType()
 Sha256 = Sha256Type()
 Date = DateType()
 File = FileType()
+IntRange = IntRangeType()
