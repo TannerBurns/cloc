@@ -168,6 +168,9 @@ class Cmd(BaseCmd):
         return value
 
     def get_params_values(self, cmdl: list):
+        """
+            TODO: need to look at if opt has no default and raise exception to not send a NoneType to optional value
+        """
         if '--help' in cmdl:
             self._print_help()
         if hasattr(self, 'params') and hasattr(self.params, 'order'):
@@ -188,7 +191,11 @@ class Cmd(BaseCmd):
                             if m[1]:
                                 self.values.append(self._convert_type(m[1], index))
                     else:
-                        self.values.append(self.params.order[index].default)
+                        if not self.params.order[index].default:
+                            msg = f'{self.params.order[index].name} was not received or given a default value'
+                            raise TypeError(msg)
+                        else:
+                            self.values.append(self._convert_type(self.params.order[index].default, index))
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches:
