@@ -116,30 +116,32 @@ class Cmd(BaseCmd):
             for p in self.params.order:
                 if isinstance(p, Arg):
                     usagestr += f'{p.name} '
+                    paramstr = f'{p.name} '
                     paramstr += f'{type(p).__name__!r} '
                     if p.type:
-                        paramstr += f'\t{p.type.__name__!r} '
-                    paramstr += f'\t{p.name} '
+                        paramstr += f'{p.type.__name__!r} '
                     if p.help:
-                        paramstr += f'\t{p.help} '
+                        paramstr += f'{p.help} '
                     paramstr += '\n'
                 if isinstance(p, Opt):
                     usagestr += f'{p.name}|{p.short_name} [value] '
+                    paramstr += f'{p.name} {p.short_name} '
                     paramstr += f'{type(p).__name__!r} '
                     if p.type:
-                        paramstr += f'\t{p.type.__name__!r} '
-                    paramstr += f'\t{p.name} {p.short_name} '
+                        paramstr += f'{p.type.__name__!r} '
+                    if p.default:
+                        paramstr += f'[default: {str(p.default)}] '
                     if p.help:
-                        paramstr += f'\t{p.help} '
+                        paramstr += f'{p.help} '
                     paramstr += '\n'
                 if isinstance(p,  Flg):
                     usagestr += f'{p.name}|{p.short_name} '
+                    paramstr += f'{p.name} {p.short_name} '
                     paramstr += f'{type(p).__name__!r} '
                     if p.type:
-                        paramstr += f'\t{p.type.__name__!r} (flag) '
-                    paramstr += f'\t{p.name} {p.short_name} '
+                        paramstr += f'{p.type.__name__!r} (flag) '
                     if p.help:
-                        paramstr += f'\t{p.help} '
+                        paramstr += f'{p.help} '
                     paramstr += '\n'
 
         usagestr += '\n'
@@ -159,7 +161,6 @@ class Cmd(BaseCmd):
                         rgx_pattern += f'-{p.short_name.replace("-", "")})'
                     self.regex_patterns.insert(0, rgx_pattern)
 
-
     def _convert_type(self, value: Any, index: int):
         if 'builtins' == self.params.order[index].type.__class__.__module__:
             value = self.params.order[index].type(value)
@@ -168,9 +169,6 @@ class Cmd(BaseCmd):
         return value
 
     def get_params_values(self, cmdl: list):
-        """
-            TODO: need to look at if opt has no default and raise exception to not send a NoneType to optional value
-        """
         if '--help' in cmdl:
             self._print_help()
         if hasattr(self, 'params') and hasattr(self.params, 'order'):
