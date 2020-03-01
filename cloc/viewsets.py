@@ -61,13 +61,13 @@ class ReqSessionViewset(GrpViewset, mixins.Version):
         self.max_retries = defaultattr(self, 'max_retries', max_retries)
         self.raise_exception = defaultattr(self, 'raise_exception', raise_exception)
         self.session = requests.Session()
-        rqAdapters = requests.adapters.HTTPAdapter(
+        session_adapters = requests.adapters.HTTPAdapter(
             pool_connections=self.pool_connections,
             pool_maxsize=self.pool_maxsize,
             max_retries=self.max_retries
         )
-        self.session.mount("https://", rqAdapters)
-        self.session.mount('http://', rqAdapters)
+        self.session.mount("https://", session_adapters)
+        self.session.mount('http://', session_adapters)
 
     def refresh_token(self):
         """Use this to add to verify auth is still valid or refresh if out of date.
@@ -95,10 +95,11 @@ class ReqSessionViewset(GrpViewset, mixins.Version):
 
     @cmd('get')
     @arg('url', type=Url, help='url for get requests')
-    @opt('--headers', '-hd', type=Json, help='headers for get request')
-    @opt('--params', '-p', type=Json, help='params for get requests')
-    @opt('--data', '-d', type=Json, help='data for get requests')
+    @opt('--headers', '-hd', type=Json, default={}, help='headers for get request')
+    @opt('--params', '-p', type=Json, default={}, help='params for get requests')
+    @opt('--data', '-d', type=Json, default={}, help='data for get requests')
     def get_command(self, url: Url, headers: Json, params: Json, data: Json):
+        """session get requests"""
         print(json.dumps(
             self._make_request(self.session.get, url, headers=headers, params=params, data=data).json(), indent=2))
 

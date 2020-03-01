@@ -1,11 +1,13 @@
-
 from cloc import arg, cmd, flg
 from cloc.utils import echoattr, listattrs
 
 class Echo(object):
+    """Echo Mixin - class object for easily adding an echo command to a class
+        - echo value of attributes by name
+    """
 
     def __call__(self):
-        return self.echo
+        return self.echo_cmd
 
     @cmd('echo')
     @arg('attribute', type=str, help='attribute value to echo')
@@ -14,9 +16,12 @@ class Echo(object):
         echoattr(self, attribute)
 
 class List(object):
+    """List Mixin - class object for easily adding an list command to a class
+        - list attributes and values of the tied class
+    """
 
     def __call__(self):
-        return self.list
+        return self.list_cmd
 
     @cmd('list')
     @flg('--verbose', '-v', help='Print all attributes')
@@ -25,9 +30,12 @@ class List(object):
         listattrs(self, verbose=verbose)
 
 class Version(object):
+    """Version Mixin - class object for easily adding an version command to a class
+        - echo the 'version' attribute if it exists
+    """
 
     def __call__(self):
-        return self.version
+        return self.version_cmd
 
     @cmd('version')
     def version_cmd(self):
