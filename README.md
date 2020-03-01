@@ -70,6 +70,7 @@ if __name__ == '__main__':
     cli.add_command(hello)
     cli()
 ```
+<br>
 
 <a name="#viewset_example"></a>
 ### Using a viewset
@@ -100,6 +101,7 @@ $ python example3.py get https://jsonplaceholder.typicode.com/todos/1
 }
 
 ```
+<br>
 
 <a name="#queryset_example"></a>
 ### Using a queryset
@@ -176,3 +178,4 @@ $ python example2.py users2 list
 'version' 1.0.0
 
 ```
+<br>
