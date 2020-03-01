@@ -2,5 +2,6 @@
 from cloc.decorators import grp, cmd, opt, arg, flg
 
 
-#TODO:Update Exception prints to be more user friendly and not raise a traceback error
-#TODO:Create in depth documentation on how to use
+#TODO: Format Cmd help messages better
+#TODO: Update Exception prints to be more user friendly and not raise a traceback error
+#TODO: Create in depth documentation on how to use (Querysets, Viewsets, Dataclass Cmds)

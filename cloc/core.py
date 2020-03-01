@@ -204,7 +204,7 @@ class Cmd(BaseCmd):
                     paramstr += f'{type(p).__name__!r} '
                     if p.type:
                         paramstr += f'{p.type.__name__!r} '
-                    if p.default:
+                    if hasattr(p, 'default'):
                         paramstr += f'[default: {str(p.default)}] '
                     if p.help:
                         paramstr += f'{p.help} '
