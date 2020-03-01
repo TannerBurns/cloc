@@ -1,18 +1,25 @@
 import json
-import inspect
 
 from typing import Any
 
-'''
-utils
-'''
-def defaultattr(cls, attribute: str, default: Any= None):
+def defaultattr(cls: object, attribute: str, default: Any= None):
+    """defaultattr - check is cls has attribute, if not set default value for attribute, then return attribute
+
+       Args:
+        cls {object} -- cls to get or update
+        attribute {str} -- attribute name to get or update
+        default {Any} -- default value to set if not found
+
+       Return:
+        method - attribute from cls
+    """
     if not hasattr(cls, attribute):
         setattr(cls, attribute, default)
     return getattr(cls, attribute)
 
-def echoattr(cls, attribute: str, list_delimiter: str = '\n', name_only: bool = False, show_type: bool = False):
-    """print an attribute to stdout
+def echoattr(cls: object, attribute: str, list_delimiter: str = '\n', name_only: bool = False, show_type: bool = False):
+    """echoattr - print an attribute by name from the cls to stdout
+
     Args:
         attribute {str} -- attribute name
         list_delimiter {str} -- delimiter to join list with [default: '\n']
@@ -42,7 +49,12 @@ def echoattr(cls, attribute: str, list_delimiter: str = '\n', name_only: bool = 
     else:
         print(f'Error: Unable to find attribute with name {attribute!r}')
 
-def listattrs(cls, verbose:bool=False):
+def listattrs(cls: object, verbose:bool=False):
+    """listattrs - list attributes and their values for a cls
+
+       Args:
+        cls {object} -- class to list attributes of
+    """
     for attr in dir(cls):
         if isinstance(getattr(cls, attr),  (bytes, str, tuple, list, dict)):
             if not verbose and (attr.startswith('__') and attr.endswith('__')):

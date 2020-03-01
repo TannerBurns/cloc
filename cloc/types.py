@@ -16,6 +16,10 @@ SHA256_PATTERN = re.compile('[A-Fa-f0-9]{64}')
 URL_PATTERN = re.compile('(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?')
 
 class BaseType(object):
+    """BaseType - BaseType object for creating new Param types
+
+        convert method should be overloaded to handle value (unpredictable) coming from cmdl state
+    """
     __name__ = 'cloc.BaseType'
     basetype: Any
 
@@ -25,8 +29,9 @@ class BaseType(object):
     def convert(self, value: str):
         """
         overload function for new type cast for param input
-        :param value:
-        :return:
+
+        Args:
+            value {str} -- value to convert
         """
         return self.basetype(value)
 
@@ -128,7 +133,7 @@ class UrlType(BaseType):
 
     def convert(self, value: str):
         if URL_PATTERN.match(value):
-            return self.basetype(value)
+            return value
         raise Exception(f'{value!r} is not a valid URL')
 
 class JsonType(BaseType):
@@ -138,13 +143,19 @@ class JsonType(BaseType):
     def __init__(self):
         super().__init__(dict)
 
-    def convert(self, value: str):
+    def convert(self, value: Union[str, dict]):
         try:
+            if isinstance(value, dict):
+                return value
             return json.loads(value)
         except:
             raise ValueError(f'{value!r} was not valid JSON')
 
 
+"""
+Initializing types for users
+Choices should be initialized by the user during type set for param
+"""
 Url = UrlType()
 Json = JsonType()
 Sha256 = Sha256Type()
