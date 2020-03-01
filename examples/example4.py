@@ -1,4 +1,3 @@
-
 from cloc import cmd, grp, opt
 
 @grp('cli')
