@@ -18,8 +18,8 @@ def _create_cmd(name:str, fn:Callable, param:Union[Arg, Flg, Opt], hidden:bool=F
 
 class opt(object):
 
-    def __init__(self, name:str, short_name: str, type: Any= None, help: str= None):
-        self.Opt = Opt(name, short_name, type, help)
+    def __init__(self, name:str, short_name: str, type: Any= None, default: Any= None, help: str= None):
+        self.Opt = Opt(name, short_name, type, default, help)
 
     def __call__(self, f):
         if isinstance(f, Cmd):

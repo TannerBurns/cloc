@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
 
 setup(
     name='cloc',
-    version='0.0.7',
+    version='0.0.8',
     packages=find_packages(exclude=['examples']),
     include_package_data=True,
     description='Command Line Object Chaining (cloc) - Modern cli framework for simple and complex cli applications',
@@ -15,7 +15,9 @@ setup(
     url='https://www.github.com/tannerburns/cloc',
     author='Tanner Burns',
     author_email='tjburns102@gmail.com',
-    install_requires=[],
+    install_requires=[
+        'requests'
+    ],
     classifiers=[
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3.7',
