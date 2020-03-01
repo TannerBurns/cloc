@@ -12,9 +12,9 @@
 - [ Installation ](#install)
 - [ Information ](#information)
 - [ Examples ](#examples)
-    - [ Simple Example ](#simple_example)
-    - [ Viewset Example ](#viewset_example)
-    - [ Queryset Example ](#queryset_example)
+    - [ Simple Example ](#simple-example)
+    - [ Viewset Example ](#viewset-example)
+    - [ Queryset Example ](#queryset-example)
 <br><br>
 
 <a name="requirements"></a>
