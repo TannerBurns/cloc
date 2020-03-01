@@ -22,10 +22,12 @@ class BaseArg(object):
 
 class Opt(BaseArg):
     short_name: str
+    default: Any
 
-    def __init__(self, name: str, short_name: str, type: Any = None, help: str = None):
+    def __init__(self, name: str, short_name: str, type: Any = None, default: Any= None, help: str = None):
         super().__init__(name, type, help)
         defaultattr(self, 'short_name', short_name)
+        defaultattr(self, 'default', default)
 
 class Flg(BaseArg):
     short_name: str
@@ -185,10 +187,14 @@ class Cmd(BaseCmd):
                         for m in matches:
                             if m[1]:
                                 self.values.append(self._convert_type(m[1], index))
+                    else:
+                        self.values.append(self.params.order[index].default)
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches:
                         self.values.append(True)
+                    else:
+                        self.values.append(False)
 
 class Grp(BaseCmd):
     commands: List[Cmd]
@@ -219,6 +225,7 @@ class Grp(BaseCmd):
                 method = getattr(command, method_name)
                 if isinstance(method, (Grp, Cmd)):
                     cmd = method.new_dataclass_cmd(method.name, method.fn, method.params, method.hidden, command)
+                    cmd.__doc__ = method.__doc__
                     if hidden:
                         cmd.hidden = hidden
                     self.commands.append(cmd)
@@ -243,7 +250,7 @@ class Grp(BaseCmd):
         if hasattr(self, 'commands'):
             for c in self.commands:
                 if not c.hidden:
-                    cmdstr += f'{c.name}\n'
+                    cmdstr += f'{c.name}\t\t{c.__doc__}\n'
         self.help = usagestr + docstr + cmdstr
 
     def get_params_values(self, cmdl: list):
