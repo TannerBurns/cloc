@@ -70,6 +70,18 @@ if __name__ == '__main__':
     cli.add_command(hello)
     cli()
 ```
+```bash
+$ python example4.py hello --help
+
+USAGE: hello --count|-c [value] --name|-n [value]
+
+Simple program that greets NAME for a total of COUNT times.
+
+Parameters
+================================================================================
+--count -c 'Opt' 'cloc.IntRange' [default: 1] Number of greetings: ex -c 0,5 OR -c 5
+--name -n 'Opt' 'str' The person to greet
+```
 <br>
 
 <a name="#viewset_example"></a>
