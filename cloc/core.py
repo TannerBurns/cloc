@@ -1,10 +1,12 @@
 import sys
 import re
 
+from colored import fg, style
 from typing import Any, Callable, NamedTuple, List, Union
 
-from cloc.utils import defaultattr
+from cloc.utils import defaultattr, checkattr
 from cloc.types import BaseType
+
 
 class BaseArg(object):
     """BaseArg - Base implementation of an argument found on the cli
@@ -186,43 +188,31 @@ class Cmd(BaseCmd):
             4. parameters
 
         """
-        docstr = f'\n{self.__doc__}\n\n'
-        usagestr = f'\nUSAGE: {self.name} '
-        paramstr = f'Parameters\n{"="*80}\n'
+        namestr = f'\n{fg("green")}{self.name.title()}{style.RESET}\n'
+        docstr = f'\n{fg("yellow")}\t{self.__doc__}{style.RESET}\n'
+        usagestr = f'\n{fg("blue")}USAGE: {self.name} '
+        paramstr = ''
+        cmd_tbl = ''
         if getattr(self, 'params'):
+            paramstr += f'\n{fg("red")}Parameters:{style.RESET}\n'
+            cmd_tbl += f'| {"Name":<18} | {"Short":<8} | {"Type":<16} | {"Help":<54} |\n'
+            cmd_tbl += f'| {"-" * 18} | {"-" * 8} | {"-" * 16} | {"-" * 54} |\n'
             for p in self.params.order:
                 if isinstance(p, Arg):
                     usagestr += f'{p.name} '
-                    paramstr = f'{p.name} '
-                    paramstr += f'{type(p).__name__!r} '
-                    if p.type:
-                        paramstr += f'{p.type.__name__!r} '
-                    if p.help:
-                        paramstr += f'{p.help} '
-                    paramstr += '\n'
+                    cmd_tbl += f'| {p.name:<18} | {" "*8} | {p.type.__name__:<16} | {p.help:<54} |\n'
                 if isinstance(p, Opt):
                     usagestr += f'{p.name}|{p.short_name} [value] '
-                    paramstr += f'{p.name} {p.short_name} '
-                    paramstr += f'{type(p).__name__!r} '
-                    if p.type:
-                        paramstr += f'{p.type.__name__!r} '
-                    if hasattr(p, 'default'):
-                        paramstr += f'[default: {str(p.default)}] '
-                    if p.help:
-                        paramstr += f'{p.help} '
-                    paramstr += '\n'
+                    cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
+                    attr = 'default'
+                    cmd_tbl += f'{f"[default: {str(checkattr(p, attr))}] "+p.help:<54} |\n'
                 if isinstance(p,  Flg):
                     usagestr += f'{p.name}|{p.short_name} '
-                    paramstr += f'{p.name} {p.short_name} '
-                    paramstr += f'{type(p).__name__!r} '
-                    if p.type:
-                        paramstr += f'{p.type.__name__!r} (flag) '
-                    if p.help:
-                        paramstr += f'{p.help} '
-                    paramstr += '\n'
+                    cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
+                    cmd_tbl += f'{f"[flag] "+p.help:<54} |\n'
 
-        usagestr += '\n'
-        self.help = usagestr + docstr + paramstr
+        usagestr += f'{style.RESET}\n'
+        self.help = namestr + docstr + usagestr + paramstr + cmd_tbl
 
     def create_params_regex(self):
         """create_params_regex - create regex patterns for each opt and flg param
@@ -396,14 +386,17 @@ class Grp(BaseCmd):
             3. list of commands in Grp
 
         """
-        docstr = f'\n{self.__doc__}\n\n'
-        usagestr = '\nUSAGE: COMMAND [Arg|Opt] ...\n'
-        cmdstr = f'Commands:\n{"="*80}\n'
-        if hasattr(self, 'commands'):
-            for c in self.commands:
-                if not c.hidden:
-                    cmdstr += f'{c.name}\t\t{c.__doc__}\n'
-        self.help = usagestr + docstr + cmdstr
+        namestr = f'\n{fg("green")}{self.name.title()}{style.RESET}\n'
+        docstr = f'\n{fg("yellow")}\t{self.__doc__}{style.RESET}\n'
+        usagestr = f'\n{fg("blue")}USAGE: {self.name.upper()} NAME{style.RESET}\n'
+        cmdstr = f'\n{fg("red")}Commands:{style.RESET}\n'
+        cmd_tbl = f'{fg("red")}| {"Name":<24} | {"Description":<52} |\n'
+        cmd_tbl += f'| {"-"*24} | {"-"*52} |\n'
+        for c in self.commands:
+            cmd_tbl += f'{fg("red")}| {style.RESET}{c.name:<24} {fg("red")}| '
+            cmd_tbl += f'{style.RESET}{"".join(str(c.__doc__)[:50]):<52} {fg("red")}|\n'
+        cmd_tbl += f'{style.RESET}'
+        self.help = namestr + docstr + usagestr + cmdstr + cmd_tbl
 
     def get_params_values(self, cmdl: list):
         """get_params_values - overloaded function, from the command line state, get the command to invoke and set name
