@@ -5,7 +5,7 @@ from cloc.types import Choices
 
 @grp('cli')
 def cli():
-    """cli"""
+    """cli docstring"""
     pass
 
 @grp('nested')

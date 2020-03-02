@@ -17,6 +17,11 @@ def defaultattr(cls: object, attribute: str, default: Any= None):
         setattr(cls, attribute, default)
     return getattr(cls, attribute)
 
+def checkattr(cls: object, attribute: str):
+    if not hasattr(cls, attribute):
+        return None
+    return getattr(cls, attribute)
+
 def echoattr(cls: object, attribute: str, list_delimiter: str = '\n', name_only: bool = False, show_type: bool = False):
     """echoattr - print an attribute by name from the cls to stdout
 
