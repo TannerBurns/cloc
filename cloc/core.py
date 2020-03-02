@@ -4,7 +4,7 @@ import re
 from colored import fg, style
 from typing import Any, Callable, NamedTuple, List, Union
 
-from cloc.utils import defaultattr, checkattr
+from cloc.utils import defaultattr
 from cloc.types import BaseType
 
 
@@ -207,7 +207,7 @@ class Cmd(BaseCmd):
                     usagestr += f'{p.name}|{p.short_name} [value] '
                     cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
                     attr = 'default'
-                    cmd_tbl += f'{f"[default: {str(checkattr(p, attr))}] "+p.help:<54} |\n'
+                    cmd_tbl += f'{"[default: "+str(p.default)+"] "+str(p.help):<54} |\n'
                 if isinstance(p,  Flg):
                     usagestr += f'{p.name}|{p.short_name} '
                     cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
