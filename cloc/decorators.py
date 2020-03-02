@@ -32,8 +32,9 @@ class opt(object):
         help {str} -- help string for opt
     """
 
-    def __init__(self, name:str, short_name: str, type: Any= None, default: Any= None, multiple:bool= False, help: str= None):
-        self.Opt = Opt(name, short_name, type, default, multiple, help)
+    def __init__(self, name:str, short_name: str, type: Any= None, default: Any= None,
+                 multiple:bool= False, required: bool= False, help: str= None):
+        self.Opt = Opt(name, short_name, type, default, multiple, required, help)
 
     def __call__(self, f):
         if isinstance(f, Cmd):
