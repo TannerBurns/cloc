@@ -37,13 +37,15 @@ class Opt(BaseArg):
     short_name: str
     default: Any
     multiple: bool
+    required: bool
 
-    def __init__(self, name: str, short_name: str, type: Any = None, default: Any= None, multiple: bool= False, help: str = None):
+    def __init__(self, name: str, short_name: str, type: Any = None, default: Any= None,
+                 multiple: bool= False, required: bool= False, help: str = None):
         super().__init__(name, type, help)
         defaultattr(self, 'short_name', short_name)
         defaultattr(self, 'multiple', multiple)
-        if default is not None:
-            defaultattr(self, 'default', default)
+        defaultattr(self, 'default', default)
+        defaultattr(self, 'required', required)
 
 class Flg(BaseArg):
     """Flg - Inherits from BaseArg (very similar to an Opt) but adds a short name and always sets the type to bool
@@ -279,11 +281,14 @@ class Cmd(BaseCmd):
                         else:
                             self.values.append(self._convert_type(matches[0][1], index))
                     else:
-                        if not hasattr(self.params.order[index], 'default'):
-                            msg = f'{self.params.order[index].name} was not received or given a default value'
+                        if self.params.order[index].required:
+                            msg = f'{self.params.order[index].name!r} is required'
                             raise TypeError(msg)
                         else:
-                            self.values.append(self._convert_type(self.params.order[index].default, index))
+                            if self.params.order[index].default is None:
+                                self.values.append(None)
+                            else:
+                                self.values.append(self._convert_type(self.params.order[index].default, index))
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches:
