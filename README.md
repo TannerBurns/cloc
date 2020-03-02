@@ -73,14 +73,18 @@ if __name__ == '__main__':
 ```bash
 $ python example4.py hello --help
 
-USAGE: hello --count|-c [value] --name|-n [value]
+Hello
 
-Simple program that greets NAME for a total of COUNT times.
+        Simple program that greets NAME for a total of COUNT times.
 
-Parameters
-================================================================================
---count -c 'Opt' 'cloc.IntRange' [default: 1] Number of greetings: ex -c 0,5 OR -c 5
---name -n 'Opt' 'str' The person to greet
+USAGE: hello --count|-c [value] --name|-n [value] 
+
+Parameters:
+| Name               | Short    | Type             | Help                                                   |
+| ------------------ | -------- | ---------------- | ------------------------------------------------------ |
+| --count            | -c       | cloc.IntRange    | [default: 1] Number of greetings: ex -c 0,5 OR -c 5    |
+| --name             | -n       | str              | [default: None] The person to greet                    |
+
 ```
 <br>
 
