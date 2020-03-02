@@ -34,10 +34,12 @@ class Opt(BaseArg):
     """
     short_name: str
     default: Any
+    multiple: bool
 
-    def __init__(self, name: str, short_name: str, type: Any = None, default: Any= None, help: str = None):
+    def __init__(self, name: str, short_name: str, type: Any = None, default: Any= None, multiple: bool= False, help: str = None):
         super().__init__(name, type, help)
         defaultattr(self, 'short_name', short_name)
+        defaultattr(self, 'multiple', multiple)
         if default is not None:
             defaultattr(self, 'default', default)
 
@@ -277,10 +279,15 @@ class Cmd(BaseCmd):
                         self.values.append(self._convert_type(cmdl[index], index))
                 if isinstance(self.params.order[index], Opt):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
-                    if matches:
-                        for m in matches:
-                            if m[1]:
-                                self.values.append(self._convert_type(m[1], index))
+                    if matches and len(matches) > 0:
+                        if self.params.order[index].multiple:
+                            match_list = [m[1] for m in matches]
+                            if len(match_list) == 1:
+                                self.values.append(match_list[0])
+                            else:
+                                self.values.append(match_list)
+                        else:
+                            self.values.append(self._convert_type(matches[0][1], index))
                     else:
                         if not hasattr(self.params.order[index], 'default'):
                             msg = f'{self.params.order[index].name} was not received or given a default value'
