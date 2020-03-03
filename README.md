@@ -13,7 +13,6 @@
 - [ Documentation ](#docs)
     - [ Cmd and Grp ](#cmd_and_grp)
     - [ Parameters - Arg, Opt, and Flg ](#parameters)
-    - [ Decorators ](#decorators)
     - [ Classes ](#classes)
         - [ BaseCmd ](#cloc_basecmd)
             - [ BaseCmd._parse ](#cloc_basecmd__parse)
@@ -21,6 +20,7 @@
             - [ BaseCmd._print_help ](#cloc_basecmd__print_help)
             - [ BaseCmd.create_params_regex ](#cloc_basecmd_create_params_regex)
             - [ BaseCmd.get_params_values ](#cloc_basecmd_get_params_values)
+    - [ Decorators ](#decorators)
 - [ Advanced Usage Examples ](#examples)
     - [ Viewset Example ](#viewset-example)
     - [ Queryset Example ](#queryset-example)
@@ -61,12 +61,12 @@ $ pip3 install .
 The two core features (classes) of CLOC, command line object chaining, are `Cmd` and `Grp`. 
 
 A `Cmd` class object defines one action to process when invoked. In most cases, this will be the defined function that 
-is decorated. A command can be invoked by calling `Cmd.start` or being invoked by a `Grp`.
+is decorated. A command can be invoked by calling the `Cmd` or being called by a `Grp`.
 
 A `Grp` class object holds one to many actions to process when invoked. The actions can be a `Cmd` or another `Grp`, but
 only one action can be called at a time per `Grp`. The first `Grp` will receive the first command 
-line state, `sys.argv[:1]`. Every `Grp` will receive a command line state and will pass this state to the 
-matched action. It is on `Grp` only to update the command line state.
+line state, `sys.argv[1:]`. Every `Grp` will receive a command line state and will pass this state to the 
+next action. It is on `Grp` only to update the command line state.
 
 ```python
 from cloc import cmd, grp
@@ -126,7 +126,7 @@ The three core parameters include:
         Flg(name: str, short_name: str, help: str = None)
 
 <br>
-Below is a simple greetings functions made into a cmd using cloc.
+Below is an extended greeting cmd from above without the grp.
 
 ```python
 from cloc import arg, cmd, flg, opt
@@ -163,37 +163,6 @@ Parameters:
 ```
 
 ---
-
-<a name="decorators"></a>
-### Decorators
-
-As seen in the above examples, decorators can be used to easily convert defined functions into a cmd or grp.
-There is a decorator for each core class in cloc. They are imported into cloc module for ease of use.
-
-Core:
-* `cmd` - easily create a new Cmd
-
-        cmd(name:str = None, hidden:bool = False)
-
-* `grp` - easily create a new Grp
-
-        grp(name:str = None, hidden:bool = False)
-
-Parameters:
-* `Arg` - `arg` - create a new Arg
-
-        arg(name:str, type: Any= None, help: str= None)
-
-* `Opt` - `opt` - create a new Opt
-
-        opt(name:str, short_name: str, type: Any= None, default: Any= None, multiple:bool= False, 
-            required: bool= False, help: str= None)
-
-* `Flg` - `flg` - create a new Flg
-
-        flg(name:str, short_name: str, help: str= None)
- 
- ---
  
 <a name="classes"></a>
 ### Classes
@@ -233,7 +202,38 @@ A method to be overloaded by a new command. This should create your regex patter
 
 A method to be overloaded by a new command. After the regex patterns have been created, then the param values can be
 parsed from the command line state and stored to be unpacked into the invoked command function.
+ ---
  
+<a name="decorators"></a>
+### Decorators
+
+As seen in the above examples, decorators can be used to easily convert defined functions into a cmd or grp.
+There is a decorator for each core class in cloc. They are imported into the cloc module for ease of use.
+
+Core:
+* `cmd` - easily create a new Cmd
+
+        cmd(name:str = None, hidden:bool = False)
+
+* `grp` - easily create a new Grp
+
+        grp(name:str = None, hidden:bool = False)
+
+Parameters:
+* `arg` - create a new Arg
+
+        arg(name:str, type: Any= None, help: str= None)
+
+* `opt` - create a new Opt
+
+        opt(name:str, short_name: str, type: Any= None, default: Any= None, multiple:bool= False, 
+            required: bool= False, help: str= None)
+
+* `flg` - create a new Flg
+
+        flg(name:str, short_name: str, help: str= None)
+ 
+
 <br>
 
 <a name="examples"></a>
