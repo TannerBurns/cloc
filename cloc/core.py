@@ -22,7 +22,7 @@ class BaseArg(object):
     type: Any
     help: str
 
-    def __init__(self, name: str, type: Any = None, help: str = None):
+    def __init__(self, name: str, type: Any = str, help: str = None):
         defaultattr(self, 'name', name)
         defaultattr(self, 'type', type)
         defaultattr(self, 'help', help)
@@ -39,7 +39,7 @@ class Opt(BaseArg):
     multiple: bool
     required: bool
 
-    def __init__(self, name: str, short_name: str, type: Any = None, default: Any= None,
+    def __init__(self, name: str, short_name: str, type: Any = str, default: Any= None,
                  multiple: bool= False, required: bool= False, help: str = None):
         super().__init__(name, type, help)
         defaultattr(self, 'short_name', short_name)
@@ -144,8 +144,8 @@ class Cmd(BaseCmd):
         self.fn = defaultattr(self, 'fn',  fn)
         self.dataclass = None
 
-    def start(self, cmdl: list):
-        """start - This method will invoke the command with the given cmdl state
+    def __call__(self, cmdl: list = None):
+        """This method will invoke the command with the given cmdl state
             cmdl {list} -- the current state of the command line
 
             1. _parse - call method to initialize command
@@ -156,6 +156,8 @@ class Cmd(BaseCmd):
             now command should have a self as first arg or this will override first arg
 
         """
+        if not cmdl:
+            cmdl = sys.argv[1:]
         self._parse(cmdl)
 
         # this should represent 'self' for the command about to start
@@ -272,7 +274,7 @@ class Cmd(BaseCmd):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches and len(matches) > 0:
                         if self.params.order[index].multiple:
-                            match_list = [m[1] for m in matches]
+                            match_list = [self._convert_type(m[1], index) for m in matches]
                             self.values.append(match_list)
                         else:
                             self.values.append(self._convert_type(matches[0][1], index))
@@ -329,10 +331,7 @@ class Grp(BaseCmd):
         if self.invoke:
             cmd = self.get_command(self.invoke)
             if cmd:
-                if isinstance(cmd, Grp):
-                    cmd(self.cmdl)
-                if isinstance(cmd, Cmd):
-                    cmd.start(self.cmdl)
+                cmd(self.cmdl)
         else:
             self._print_help()
 
