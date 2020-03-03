@@ -17,7 +17,8 @@ setup(
     author_email='tjburns102@gmail.com',
     install_requires=[
         'requests',
-        'colored'
+        'colored',
+        'double_click'
     ],
     classifiers=[
         'Operating System :: OS Independent',

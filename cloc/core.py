@@ -102,8 +102,7 @@ class BaseCmd(object):
         """_print_help - protected method to print the built help string
             this could in theory be overloaded to also add content to help string before print
         """
-        print(self.help)
-        sys.exit(0)
+        trace(self.help)
 
     def create_params_regex(self):
         """This is to be implemented by classes that inherit BaseCmd"""

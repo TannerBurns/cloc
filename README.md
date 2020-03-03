@@ -44,6 +44,28 @@ $ pip3 install .
 * Create command line viewsets for abstracting user interaction on command querysets
 <br><br>
 
+<a name="classes"></a>
+## Cloc Classes
+
+<a name="cloc_basecmd"></a>
+### `cloc.core.BaseCmd(name: str, params: Params= None, hidden: bool= False)`
+
+A base class that represents a basic command object with a name, Params (`cloc.core.Params`), and a hidden option.
+This class is meant to be inherited by new command classes. 
+Refer to `Cmd` or `Grp` for an inherited `BaseCmd` example.
+
+<a name="cloc_basecmd__parse"></a>
+#### `BaseCmd._parse(cmdl: list)`
+
+A method to parse the current command line state. This will create the help string, create the param regex strings,
+and get params values for the invoked `BaseCmd`. This method is protected and should normally not be called.
+
+
+
+
+
+    
+
 <a name="#examples"></a>
 ## Examples
 
