@@ -1,5 +1,5 @@
 from cloc import arg, cmd, flg
-from cloc.utils import echoattr, listattrs
+from cloc.utils import echo, listattrs
 
 class Echo(object):
     """Echo Mixin - class object for easily adding an echo command to a class
@@ -13,7 +13,7 @@ class Echo(object):
     @arg('attribute', type=str, help='attribute value to echo')
     def echo_cmd(self, attribute: str):
         """echo mixin command"""
-        echoattr(self, attribute)
+        echo(cls=self, attribute=attribute)
 
 class List(object):
     """List Mixin - class object for easily adding an list command to a class
@@ -40,4 +40,4 @@ class Version(object):
     @cmd('version')
     def version_cmd(self):
         """version mixin command"""
-        echoattr(self, 'version')
+        echo(cls=self, attribute='version', color='blue')

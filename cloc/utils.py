@@ -1,6 +1,8 @@
 import json
+import sys
 
-from typing import Any
+from colored import fg, style
+from typing import Any, Union
 
 def defaultattr(cls: object, attribute: str, default: Any= None):
     """defaultattr - check is cls has attribute, if not set default value for attribute, then return attribute
@@ -17,12 +19,8 @@ def defaultattr(cls: object, attribute: str, default: Any= None):
         setattr(cls, attribute, default)
     return getattr(cls, attribute)
 
-def checkattr(cls: object, attribute: str):
-    if not hasattr(cls, attribute):
-        return None
-    return getattr(cls, attribute)
-
-def echoattr(cls: object, attribute: str, list_delimiter: str = '\n', name_only: bool = False, show_type: bool = False):
+def echo(message: Union[str, tuple, list, dict]= None, cls: object= None, attribute: str= None,
+             list_delimiter: str = '\n', show_type: bool = False, indent: int= 4, color: str= None):
     """echoattr - print an attribute by name from the cls to stdout
 
     Args:
@@ -31,12 +29,22 @@ def echoattr(cls: object, attribute: str, list_delimiter: str = '\n', name_only:
         show_name {bool} -- option to show attribute name on print
         show_type {bool} -- option to show type of attribute on print
     """
-    if hasattr(cls, attribute):
-        value = getattr(cls, attribute)
+    msg = ''
+    if message:
+        if isinstance(message,  str):
+            msg += message
+        elif isinstance(message, (tuple, list)):
+            msg += list_delimiter.join(message)
+        elif isinstance(message, dict):
+            msg += json.dumps(message, indent=indent)
+        else:
+            msg += str(message)
+    elif cls and attribute:
+        if hasattr(cls, attribute):
+            value = getattr(cls, attribute)
 
-        msg = f'{attribute!r} '
+            msg += f'{attribute!r} '
 
-        if not name_only:
             if show_type:
                 msg += f'{type(value).__name__!r} '
 
@@ -49,10 +57,15 @@ def echoattr(cls: object, attribute: str, list_delimiter: str = '\n', name_only:
                 msg += list_delimiter.join((str(v) for v in value))
             else:
                 msg += str(value)
-
-        print(msg)
+        else:
+            print(f'Error: Unable to find attribute with name {attribute!r} in {cls!r}')
+    if color:
+        try:
+            print(f'{fg(color)}{msg}{style.RESET}')
+        except Exception:
+            print(msg)
     else:
-        print(f'Error: Unable to find attribute with name {attribute!r}')
+        print(msg)
 
 def listattrs(cls: object, verbose:bool=False):
     """listattrs - list attributes and their values for a cls
@@ -64,5 +77,11 @@ def listattrs(cls: object, verbose:bool=False):
         if isinstance(getattr(cls, attr),  (bytes, str, tuple, list, dict)):
             if not verbose and (attr.startswith('__') and attr.endswith('__')):
                 continue
-            echoattr(cls, attr, list_delimiter=', ')
+            echo(cls=cls, attribute=attr, list_delimiter=', ')
 
+def trace(message:str, exception: Exception= None, raise_exception: bool= False, exit_code: int= 0, color: str= None):
+    if exception and raise_exception:
+        if callable(exception):
+            exception(message)
+    echo(message, color=color)
+    sys.exit(exit_code)

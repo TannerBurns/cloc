@@ -11,7 +11,6 @@ def cli():
 @opt('--name', '-n', type=str, help='The person to greet')
 def hello(count: IntRange, name: str):
     """Simple program that greets NAME for a total of COUNT times."""
-    print(name)
     for _ in count:
         print(f'Hello {name!r}')
 

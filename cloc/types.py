@@ -5,7 +5,7 @@ import io
 
 from datetime import datetime
 from typing import Any, Union
-from cloc.utils import defaultattr
+from cloc.utils import defaultattr, trace
 
 """
 Types still to make:
@@ -44,7 +44,7 @@ class Choices(BaseType):
 
     def convert(self, value: str):
         if value not in self.choices:
-            raise ValueError(f'Error: {value!r} was not found in choices: {", ".join(self.choices)!r}')
+            trace(f'Error: {value!r} was not found in choices: {", ".join(self.choices)!r}',  TypeError)
         return value
 
 class FileType(BaseType):
@@ -58,9 +58,9 @@ class FileType(BaseType):
 
     def convert(self, filepath: str):
         if not os.path.exists(filepath):
-            raise ValueError(f'Error: {filepath!r} does not  exists')
+            trace(f'Error: {filepath!r} does not  exists', TypeError)
         elif not os.path.isfile(filepath):
-            raise ValueError(f'Error: {filepath!r} is not a file')
+            trace(f'Error: {filepath!r} is not a file', TypeError)
         self.fobj = open(filepath, 'r')
         return self.fobj
 
@@ -79,11 +79,11 @@ class IntRangeType(BaseType):
             elif len(vals) == 2:
                 return list(range(int(vals[0]), int(vals[1])))
             else:
-                raise ValueError(f'Unable to find a start or stop value based on given: {value!r}')
+                trace(f'Unable to find a start or stop value based on given: {value!r}', TypeError)
         elif isinstance(value, int):
             return list(range(value))
         else:
-            raise TypeError(f'{value!r} was {type(value).__name__!r} and not {"str"!r} or {"int"!r}')
+            trace(f'{value!r} was {type(value).__name__!r} and not {"str"!r} or {"int"!r}', TypeError)
 
 class DateType(BaseType):
     __name__ = 'cloc.Date'
@@ -99,7 +99,7 @@ class DateType(BaseType):
                 return datetime.strptime(value, p)
             except:
                 pass
-        raise ValueError(f'{value!r} did not match any date patterns: {", ".join(patterns)!r}')
+        trace(f'{value!r} was {type(value).__name__!r} and not {"str"!r} or {"int"!r}', TypeError)
 
 class Sha256Type(BaseType):
     __name__ = 'cloc.Sha256'
@@ -115,14 +115,14 @@ class Sha256Type(BaseType):
                     with open(value, 'r') as fin:
                         return SHA256_PATTERN.findall(fin.read())
                 else:
-                    raise ValueError(f'expected path to be a file, got {value!r}, {type(value).__name__!r}')
+                    trace(f'expected path to be a file, got {value!r}, {type(value).__name__!r}', TypeError)
             else:
                 if SHA256_PATTERN.match(value):
                     return value
                 else:
-                    raise ValueError(f'{value!r} is not a valid sha256')
+                    trace(f'{value!r} is not a valid sha256', TypeError)
         else:
-            raise ValueError(f'expected string for sha256 type conversion, got {value!r} of type {type(value).__name__}')
+            trace(f'expected string for sha256 type conversion, got {value!r} of type {type(value).__name__}')
 
 class UrlType(BaseType):
     __name__ = 'cloc.Url'
@@ -134,7 +134,7 @@ class UrlType(BaseType):
     def convert(self, value: str):
         if URL_PATTERN.match(value):
             return value
-        raise Exception(f'{value!r} is not a valid URL')
+        trace(f'{value!r} is not a valid URL', TypeError)
 
 class JsonType(BaseType):
     __name__ = 'cloc.Json'
@@ -149,7 +149,7 @@ class JsonType(BaseType):
                 return value
             return json.loads(value)
         except:
-            raise ValueError(f'{value!r} was not valid JSON')
+            trace(f'{value!r} was not valid JSON', TypeError)
 
 
 """
