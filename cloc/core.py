@@ -4,7 +4,7 @@ import re
 from colored import fg, style
 from typing import Any, Callable, NamedTuple, List, Union
 
-from cloc.utils import defaultattr
+from cloc.utils import defaultattr, trace
 from cloc.types import BaseType
 
 
@@ -266,7 +266,7 @@ class Cmd(BaseCmd):
                     if cmdl[index].startswith('-'):
                         msg = f'An {"opt"!r} was found: {cmdl[index]!r}, '
                         msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
-                        raise TypeError(msg)
+                        trace(msg, AssertionError, color='red')
                     if cmdl[index]:
                         self.values.append(self._convert_type(cmdl[index], index))
                 if isinstance(self.params.order[index], Opt):
@@ -274,16 +274,13 @@ class Cmd(BaseCmd):
                     if matches and len(matches) > 0:
                         if self.params.order[index].multiple:
                             match_list = [m[1] for m in matches]
-                            if len(match_list) == 1:
-                                self.values.append(match_list[0])
-                            else:
-                                self.values.append(match_list)
+                            self.values.append(match_list)
                         else:
                             self.values.append(self._convert_type(matches[0][1], index))
                     else:
                         if self.params.order[index].required:
                             msg = f'{self.params.order[index].name!r} is required'
-                            raise TypeError(msg)
+                            trace(msg, AssertionError, color='red')
                         else:
                             if self.params.order[index].default is None:
                                 self.values.append(None)

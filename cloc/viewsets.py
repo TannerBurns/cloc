@@ -2,7 +2,7 @@ import json
 import requests
 
 from cloc import mixins, arg, opt, cmd
-from cloc.utils import defaultattr
+from cloc.utils import defaultattr, echo
 from cloc.types import Url, Json
 
 from typing import Any, Union
@@ -53,21 +53,24 @@ class ReqSessionViewset(GrpViewset, mixins.Version):
     version: str= '1.0.0'
 
 
-    def __init__(self, *args, max_retries: int= 3, pool_connections: int= 16,
-                 pool_maxsize: int= 16,  raise_exception: bool= True, **kwargs):
+    def __init__(self, *args, session: requests.Session= None ,max_retries: int= 3,
+                 pool_connections: int= 16, pool_maxsize: int= 16,  raise_exception: bool= True, **kwargs):
         super().__init__(*args, **kwargs)
-        self.pool_connections = defaultattr(self, 'pool_connections', pool_connections)
-        self.pool_maxsize = defaultattr(self, 'pool_maxsize', pool_maxsize)
-        self.max_retries = defaultattr(self, 'max_retries', max_retries)
-        self.raise_exception = defaultattr(self, 'raise_exception', raise_exception)
-        self.session = requests.Session()
-        session_adapters = requests.adapters.HTTPAdapter(
-            pool_connections=self.pool_connections,
-            pool_maxsize=self.pool_maxsize,
-            max_retries=self.max_retries
-        )
-        self.session.mount("https://", session_adapters)
-        self.session.mount('http://', session_adapters)
+        if session:
+            self.session = defaultattr(self, 'session', session)
+        else:
+            self.pool_connections = defaultattr(self, 'pool_connections', pool_connections)
+            self.pool_maxsize = defaultattr(self, 'pool_maxsize', pool_maxsize)
+            self.max_retries = defaultattr(self, 'max_retries', max_retries)
+            self.raise_exception = defaultattr(self, 'raise_exception', raise_exception)
+            self.session = defaultattr(self, 'session', requests.Session())
+            session_adapters = requests.adapters.HTTPAdapter(
+                pool_connections=self.pool_connections,
+                pool_maxsize=self.pool_maxsize,
+                max_retries=self.max_retries
+            )
+            self.session.mount("https://", session_adapters)
+            self.session.mount('http://', session_adapters)
 
     def refresh_token(self):
         """Use this to add to verify auth is still valid or refresh if out of date.
@@ -100,8 +103,7 @@ class ReqSessionViewset(GrpViewset, mixins.Version):
     @opt('--data', '-d', type=Json, default={}, help='data for get requests')
     def get_command(self, url: Url, headers: Json, params: Json, data: Json):
         """session get requests"""
-        print(json.dumps(
-            self._make_request(self.session.get, url, headers=headers, params=params, data=data).json(), indent=2))
+        echo(self._make_request(self.session.get, url, headers=headers, params=params, data=data).json())
 
 
 
