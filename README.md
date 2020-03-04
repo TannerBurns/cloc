@@ -31,7 +31,13 @@
         - [ cloc.core.Cmd ](#cloc_cmd)
             - [ Cmd.fn ](#cloc_cmd_fn)
             - [ Cmd.dataclass ](#cloc_cmd_dataclass)
+            - [ Cmd.new_dataclass_cmd ](#cloc_cmd_new_dataclass_cmd)
         - [ cloc.core.Grp ](#cloc_grp)
+            - [ Grp.commands ](#cloc_grp_commands)
+            - [ Grp.invoke ](#cloc_grp_invoke)
+            - [ Grp.cmdl ](#cloc_grp_cmdl)
+            - [ Grp.add_command ](#cloc_grp_add_command)
+            - [ Grp.get_command ](#cloc_grp_get_command)
     - [ Decorators ](#decorators)
         - [ cloc.decorators.cmd ](#decorators_cmd)
         - [ cloc.decorators.grp ](#decorators_grp)
@@ -238,12 +244,53 @@ The dataclass attribute is an object to replace `self` with if the cmd is define
 
 This class method will create a new Cmd that will have the dataclass attribute set
 
+<a name="cloc_cmd_create_regex_patterns"></a>
+##### `Cmd.create_regex_patterns()`
+
+Create regex patterns for each opt and flg param to match against the command line state during get_values
+
+<a name="cloc_cmd_get_values"></a>
+##### `Cmd.get_values(cmdl: list)`
+
+Overloaded function from BaseCmd, this method will create the values to be unpacked into `Cmd.fn`.
+If `--help` is anywhere the command line, the help message for the nearest Cmd is called.
+
 ---
 
 <a name="cloc_grp"></a>
 #### cloc.core.Grp(name: str, commands: List[Cmd] = None, hidden:bool= False)
 
-Grp inherits BaseCmd to create a new type of command that holds one to many commands and can be chained together
+Grp inherits from BaseCmd, this class holds a list of Cmd objects which can be invoked by name. If Grp calls
+Grp, the command line state will be updated. If a Grp is made with no cmdl supplied then sys.argv[1:] is used.
+
+<a name="cloc_grp_commands"></a>
+##### `Grp.commands`: `List[Cmd]`
+
+The commands attribute is a list of Cmd objects. Cmd objects are added through the `Grp.add_command` method.
+
+<a name="cloc_grp_invoke"></a>
+##### `BaseCmd.invoke`: `str`
+
+The invoke attribute is user input from the command line and should match a `Cmd.name` in `Grp.commands`
+
+<a name="cloc_grp_cmdl"></a>
+##### `BaseCmd.cmdl`: `list`
+
+The cmdl attribute should represent the current state of the command line for the Grp to parse.
+
+<a name="cloc_grp_add_command"></a>
+##### `BaseCmd.add_command(command: BaseCmd, hidden:bool= None)`
+
+Add a Cmd or Grp to another Grp. Can also override or set hidden state
+
+This method will also make a new dataclass Cmd if needed. If a command is found inside a class,
+initiate a dataclass Cmd to be made. Setting `dataclass = class that declared the commands`.
+* a dataclass Cmd is the magic to allow Cli Viewsets and Querysets
+
+<a name="cloc_grp_get_command"></a>
+##### `BaseCmd.get_command(name: str)`
+
+Find a Cmd by name and return the object
 
 ---
 

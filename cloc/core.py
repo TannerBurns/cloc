@@ -26,6 +26,12 @@ class BaseArg(object):
         defaultattr(self, 'type', type)
         defaultattr(self, 'help', help)
 
+class Arg(BaseArg):
+    """Arg - A copy of BaseArg used for more explicit naming
+    """
+    def __init__(self, name: str, type: Any = None, help: str = None):
+        super().__init__(name, type, help)
+
 class Opt(BaseArg):
     """Opt - Inherits from BaseArg but also adds a short name and default value attribute
 
@@ -57,12 +63,6 @@ class Flg(BaseArg):
     def __init__(self, name: str, short_name: str, help: str = None):
         super().__init__(name, bool, help)
         defaultattr(self, 'short_name', short_name)
-
-class Arg(BaseArg):
-    """Arg - A copy of BaseArg used for more explicit naming
-    """
-    def __init__(self, name: str, type: Any = None, help: str = None):
-        super().__init__(name, type, help)
 
 class Params(NamedTuple):
     """Params - Inherits from NamedTuple, holds the order of the arg, opt, or flg as they are declared
@@ -150,7 +150,7 @@ class BaseCmd(object):
 
     def _parse(self, cmdl: list):
         """_parse - protected method to initialize the BaseCmd (creates help msg, create param regex patters, and
-           get parameter values from the input into parse -> should represent a command line in the state it is in.
+           get parameter values from the input into parse -> should represent the latest state of the command line.
 
            Args:
             cmdl {list} -- the state of the command line
@@ -178,6 +178,8 @@ class Cmd(BaseCmd):
 
     def __call__(self, cmdl: list = None):
         """This method will invoke the command with the given cmdl state
+
+           Args:
             cmdl {list} -- the current state of the command line
 
             1. _parse - call method to initialize command
@@ -204,6 +206,8 @@ class Cmd(BaseCmd):
     def new_dataclass_cmd(cls, name: str, fn: Callable, params: Params= None,
                           hidden: bool= False, dataclass: object= None):
         """new_dataclass_cmd - get a new cls of Cmd that is tied to another class
+
+           Args:
             name {str} -- name used to invoke and track command
             hidden {bool} -- False = Command will be shown; True = Command will not be shown but can be invoked
             params {Params} -- Params declared by the user [arg, opt, and/or flg]
@@ -234,8 +238,8 @@ class Cmd(BaseCmd):
     def get_values(self, cmdl: list):
         """get_values - overloaded function, this method will create the values to be unpacked
            into the Cmd function. If --help is anywhere is cmdl, the help message will be printed.
-           This helps short circuit if you remember some but not all parameters to a Cmd
 
+           Args:
             cmdl {list} - command line at current state
 
         """
@@ -319,16 +323,17 @@ class Grp(BaseCmd):
             self._print_help()
 
     def add_command(self, command: BaseCmd, hidden:bool= None):
-        """add_command - add a new command to the Grp. A command can be either Cmd or Grp. Can also set hidden state
+        """add_command - add a new command to the Grp. A command can either be a Cmd or Grp.
+            Can also override or set hidden state
 
            Args:
             command {BaseCmd} -- a Grp or Cmd to add to current Grp
             hidden {bool} -- flag for hiding Grp or Cmd
 
-            this method will also make a new dataclass Cmd if needed. If a class of commands is given this will
+            this method will also make a new dataclass Cmd if needed. If a command is found inside a class,
             initiate a dataclass Cmd to be made. Setting dataclass = class that declared the commands.
             This attributes are now tied to this dataclass Cmd to allow a MVC CLI capability
-            - this is the magic to allow Cli Viewsets and Querysets
+            - a dataclass Cmd is the magic to allow Cli Viewsets and Querysets
         """
         if not isinstance(command, (Grp, Cmd)):
             # look for groups or commands in this class and make them dataclass commands
