@@ -52,9 +52,9 @@
         - [ cloc.utils.listattrs ](#utils_listattrs)
         - [ cloc.utils.defaultattr ](#utils_defaultattr)
 - [ Advanced Usage Examples ](#examples)
-    - [ Viewset Example ](#viewset-example)
-    - [ Queryset Example ](#queryset-example)
-<br><br>
+    - [ Viewset Example ](#viewset_example)
+    
+<br>
 
 <a name="install"></a>
 ## Installation
