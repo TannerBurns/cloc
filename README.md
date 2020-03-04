@@ -15,13 +15,12 @@
 * Use mixin commands to quickly add pre defined commands to your cli
 * Groups of commands can be found from any class that has defined a `cloc.core.BaseCmd`
 
-- [ Requirements ](#requirements)
 - [ Installation ](#install)
 - [ Documentation ](#docs)
     - [ Cmd and Grp ](#cmd_and_grp)
     - [ Parameters - Arg, Opt, and Flg ](#parameters)
     - [ Classes ](#classes)
-        - [ BaseCmd ](#cloc_basecmd)
+        - [ cloc.core.BaseCmd ](#cloc_basecmd)
             - [ BaseCmd.values ](#cloc_basecmd_values)
             - [ BaseCmd.params ](#cloc_basecmd_params)
             - [ BaseCmd._parse ](#cloc_basecmd__parse)
@@ -29,10 +28,10 @@
             - [ BaseCmd._print_help ](#cloc_basecmd__print_help)
             - [ BaseCmd.create_regex_patterns ](#cloc_basecmd_create_regex_patterns)
             - [ BaseCmd.get_values ](#cloc_basecmd_get_values)
-        - [ Cmd ](#cloc_cmd)
+        - [ cloc.core.Cmd ](#cloc_cmd)
             - [ Cmd.fn ](#cloc_cmd_fn)
             - [ Cmd.dataclass ](#cloc_cmd_dataclass)
-        - [ Grp ](#cloc_grp)
+        - [ cloc.core.Grp ](#cloc_grp)
     - [ Decorators ](#decorators)
         - [ cloc.decorators.cmd ](#decorators_cmd)
         - [ cloc.decorators.grp ](#decorators_grp)
@@ -49,22 +48,11 @@
     - [ Queryset Example ](#queryset-example)
 <br><br>
 
-<a name="requirements"></a>
-## Requirements
-* System
-    * Python 3.6+
-    
-* Python Pip
-    * requests
-<br><br>
-
 <a name="install"></a>
 ## Installation
  *Virtual Environment is recommended*
 ```bash
-git clone https://www.github.com/tannerburns/cloc
-cd cloc
-pip3 install .
+pip3 install cloc
 ```
 <br>
 
