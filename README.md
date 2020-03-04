@@ -27,8 +27,8 @@
             - [ BaseCmd._parse ](#cloc_basecmd__parse)
             - [ BaseCmd.create_help ](#cloc_basecmd_create_help)
             - [ BaseCmd._print_help ](#cloc_basecmd__print_help)
-            - [ BaseCmd.create_params_regex ](#cloc_basecmd_create_params_regex)
-            - [ BaseCmd.get_params_values ](#cloc_basecmd_get_params_values)
+            - [ BaseCmd.create_regex_patterns ](#cloc_basecmd_create_regex_patterns)
+            - [ BaseCmd.get_values ](#cloc_basecmd_get_values)
         - [ Cmd ](#cloc_cmd)
             - [ Cmd.fn ](#cloc_cmd_fn)
             - [ Cmd.dataclass ](#cloc_cmd_dataclass)
@@ -217,12 +217,12 @@ Protected method to print the help message. This method can be overloaded in cer
 attribute which might not exists in certain states.
 
 <a name="cloc_basecmd_create_regex_patterns"></a>
-##### `BaseCmd.create_params_regex()`
+##### `BaseCmd.create_regex_patterns()`
 
 A method to be overloaded by a new command. This should create your regex patterns based on the defined parameters.
 
 <a name="cloc_basecmd_get_values"></a>
-##### `BaseCmd.get_params_values(cmdl: list)`
+##### `BaseCmd.get_values(cmdl: list)`
 
 A method to be overloaded by a new command. After the regex patterns have been created, then the param values can be
 parsed from the command line state and stored to be unpacked into the invoked command function.
