@@ -1,13 +1,20 @@
-# Command Line Object Chaining - cloc
+# cloc
 
 <!--Badges-->
 ![MIT badge](https://img.shields.io/badge/license-MIT-black)
 ![Python3.6 badge](https://img.shields.io/badge/python-v3.6+-blue?logo=python&logoColor=yellow)
 ![Platform badge](https://img.shields.io/badge/platform-linux%20%7C%20osx%20%7C%20win32-yellow)
 
-    Modern cli framework for simple and complex cli applications
+### Command Line Object Chaining
 
-# ToC
+    Command line framework for making simple and complex command line applications.
+    
+* Easily create stand alone commands or nested groups of commands
+* Define and connect commands with class objects
+* Inherit and create viewsets of commands to be able to reuse large nested groups in other cli applications
+* Use mixin commands to quickly add pre defined commands to your cli
+* Groups of commands can be found from any class that has defined a `cloc.core.BaseCmd`
+
 - [ Requirements ](#requirements)
 - [ Installation ](#install)
 - [ Documentation ](#docs)
@@ -15,12 +22,28 @@
     - [ Parameters - Arg, Opt, and Flg ](#parameters)
     - [ Classes ](#classes)
         - [ BaseCmd ](#cloc_basecmd)
+            - [ BaseCmd.values ](#cloc_basecmd_values)
+            - [ BaseCmd.params ](#cloc_basecmd_params)
             - [ BaseCmd._parse ](#cloc_basecmd__parse)
             - [ BaseCmd.create_help ](#cloc_basecmd_create_help)
             - [ BaseCmd._print_help ](#cloc_basecmd__print_help)
             - [ BaseCmd.create_params_regex ](#cloc_basecmd_create_params_regex)
             - [ BaseCmd.get_params_values ](#cloc_basecmd_get_params_values)
+        - [ Cmd ](#cloc_cmd)
+            - [ Cmd.fn ](#cloc_cmd_fn)
+            - [ Cmd.dataclass ](#cloc_cmd_dataclass)
+        - [ Grp ](#cloc_grp)
     - [ Decorators ](#decorators)
+        - [ cloc.decorators.cmd ](#decorators_cmd)
+        - [ cloc.decorators.grp ](#decorators_grp)
+        - [ cloc.decorators.arg ](#decorators_arg)
+        - [ cloc.decorators.opt ](#decorators_opt)
+        - [ cloc.decorators.flg ](#decorators_flg)
+    - [ Helper Function ](#helper_function)
+        - [ cloc.utils.echo ](#utils_echo)
+        - [ cloc.utils.trace ](#utils_trace)
+        - [ cloc.utils.listattrs ](#utils_listattrs)
+        - [ cloc.utils.defaultattr ](#utils_defaultattr)
 - [ Advanced Usage Examples ](#examples)
     - [ Viewset Example ](#viewset-example)
     - [ Queryset Example ](#queryset-example)
@@ -39,21 +62,14 @@
 ## Installation
  *Virtual Environment is recommended*
 ```bash
-$ git clone https://www.github.com/tannerburns/cloc
-$ cd cloc
-$ pip3 install .
+git clone https://www.github.com/tannerburns/cloc
+cd cloc
+pip3 install .
 ```
 <br>
 
 <a name="docs"></a>
 ## Documentation
-    Command line framework for making simple and complex command line applications.
-* Easily group commands together
-* Connect commands with classes for querysets
-* Create command line viewsets for abstracting user interaction on command querysets
-<br>
-
----
 
 <a name="cmd_and_grp"></a>
 ### Cmd and Grp
@@ -170,9 +186,18 @@ Parameters:
 <a name="cloc_basecmd"></a>
 #### cloc.core.BaseCmd(name: str, params: Params= None, hidden: bool= False)
 
-A base class that represents a basic command object with a name, Params (`cloc.core.Params`), and a hidden option.
-This class is meant to be inherited by new command classes. 
-Refer to `Cmd` or `Grp` for an inherited `BaseCmd` example.
+A base class that represents a basic command with a name, Params (`cloc.core.Params`), and a hidden option.
+This class is meant to be inherited by new typs of commands. This class alone cannot invoke any functionality.
+
+<a name="cloc_basecmd_values"></a>
+##### `BaseCmd.values`: `list`
+
+The values attribute is the list of arguments to be unpacked into the invoked function from the cmd
+
+<a name="cloc_basecmd_params"></a>
+##### `BaseCmd.params`: `cloc.core.Params`
+
+The params attribute is the list of parameter objects defined for the cmd
 
 <a name="cloc_basecmd__parse"></a>
 ##### `BaseCmd._parse(cmdl: list)`
@@ -183,8 +208,7 @@ and get params values for the invoked `BaseCmd`. This method is protected and sh
 <a name="cloc_basecmd_create_help"></a>
 ##### `BaseCmd.create_help()`
 
-A method to be overloaded by a new command. This should create a help message to print in the case `--help` is found in
-the command line state.
+The create_help method with create a formatted and colored help string using any params found
 
 <a name="cloc_basecmd__print_help"></a>
 ##### `BaseCmd._print_help()`
@@ -192,47 +216,117 @@ the command line state.
 Protected method to print the help message. This method can be overloaded in certain cases but is meant to call the help
 attribute which might not exists in certain states.
 
-<a name="cloc_basecmd_create_params_regex"></a>
+<a name="cloc_basecmd_create_regex_patterns"></a>
 ##### `BaseCmd.create_params_regex()`
 
 A method to be overloaded by a new command. This should create your regex patterns based on the defined parameters.
 
-<a name="cloc_basecmd_get_params_values"></a>
+<a name="cloc_basecmd_get_values"></a>
 ##### `BaseCmd.get_params_values(cmdl: list)`
 
 A method to be overloaded by a new command. After the regex patterns have been created, then the param values can be
 parsed from the command line state and stored to be unpacked into the invoked command function.
- ---
- 
+
+---
+
+<a name="cloc_cmd"></a>
+#### cloc.core.Cmd(name: str, fn: Callable, params: Params = None, hidden: bool = False)
+
+Cmd inherits BaseCmd to create a new command that can invoke a given function and be connected to class objects.
+
+<a name="cloc_cmd_fn"></a>
+##### `Cmd.fn`: `Callable`
+
+The fn attribute is the defined function to run when cmd is invoked
+
+<a name="cloc_cmd_dataclass"></a>
+##### `Cmd.dataclass`: `object`
+
+The dataclass attribute is an object to replace `self` with if the cmd is defined inside a class
+
+<a name="cloc_cmd_new_dataclass_cmd"></a>
+##### `Cmd.new_dataclass_cmd(cls, name: str, fn: Callable, params: Params= None, hidden: bool= False, dataclass: object= None)`
+`Classmethod`
+
+This class method will create a new Cmd that will have the dataclass attribute set
+
+---
+
+<a name="cloc_grp"></a>
+#### cloc.core.Grp(name: str, commands: List[Cmd] = None, hidden:bool= False)
+
+Grp inherits BaseCmd to create a new type of command that holds one to many commands and can be chained together
+
+---
+
 <a name="decorators"></a>
 ### Decorators
 
 As seen in the above examples, decorators can be used to easily convert defined functions into a cmd or grp.
 There is a decorator for each core class in cloc. They are imported into the cloc module for ease of use.
 
-Core:
-* `cmd` - easily create a new Cmd
+<a name="decorators_cmd"></a>
+##### `cloc.decorators.cmd(name:str = None, hidden:bool = False)`
 
-        cmd(name:str = None, hidden:bool = False)
+Returns a new Cmd object
 
-* `grp` - easily create a new Grp
+<a name="decorators_grp"></a>
+##### `cloc.decorators.grp(name:str = None, hidden:bool = False)`
 
-        grp(name:str = None, hidden:bool = False)
+Returns a new Grp object
 
-Parameters:
-* `arg` - create a new Arg
+<a name="decorators_arg"></a>
+##### `cloc.decorators.arg(name:str, type: Any= None, help: str= None)`
 
-        arg(name:str, type: Any= None, help: str= None)
+Returns a Cmd object. If the object being decorated is already a Cmd object, the Arg will be appended to Cmd.params
 
-* `opt` - create a new Opt
+<a name="decorators_opt"></a>
+##### `cloc.decorators.opt(name:str, short_name: str, type: Any= None, default: Any= None, multiple:bool= False, required: bool= False, help: str= None)`
 
-        opt(name:str, short_name: str, type: Any= None, default: Any= None, multiple:bool= False, 
-            required: bool= False, help: str= None)
+Returns a Cmd object. If the object being decorated is already a Cmd object, the Opt will be appended to Cmd.params
 
-* `flg` - create a new Flg
+<a name="decorators_flg"></a>
+##### `cloc.decorators.flg(name:str, short_name: str, help: str= None)`
 
-        flg(name:str, short_name: str, help: str= None)
- 
+Returns a Cmd object. If the object being decorated is already a Cmd object, the Flg will be appended to Cmd.params
+
+---
+
+<a name="helper_functions"></a>
+### Helper Functions
+
+<a name="utils_echo"></a>
+##### `cloc.utils.echo(message: Union[str, tuple, list, dict]= None, cls: object= None, attribute: str= None, list_delimiter: str = '\n', show_type: bool = False, indent: int= 4, color: str= None)`
+
+Formats and colors a message, or class attribute.
+* Pretty print tuple, list, and dict objects
+* Customize the list delimiter and indent level for pretty print
+* Color output
+* Print the type for the output
+
+prints the formatted string
+
+<a name="utils_trace"></a>
+##### `cloc.utils.trace(message:str, exception: Exception= None, raise_exception: bool= False, exit_code: int= 0, color: str= None)`
+
+Formats and colors the output of a simplified traceback message.
+* Utilizes the echo util for formatted and colored output
+* Can accept and raise any type of Exception with the message
+* Give an exit code to return with if exception is not raised
+
+prints the formatted string and calls `sys.exit(exit_code)` or raises the given Exception (Assert) used if none given
+
+<a name="utils_listattrs"></a>
+##### `cloc.utils.listattrs(cls: object, verbose:bool=False)`
+
+List the attributes and values of a given class object. If verbose is True, python defined attributes 
+will also be included.
+* Utilizes the echo util for formatted output
+
+<a name="utils_defaultattr"></a>
+##### `cloc.utils.defaultattr(cls: object, attribute: str, default: Any= None)`
+
+Return the value of the attribute if exists or set the default and return the attribute value
 
 <br>
 
@@ -269,90 +363,3 @@ $ python example3.py get https://jsonplaceholder.typicode.com/todos/1
 
 ```
 <br>
-
-<a name="queryset_example"></a>
-### Using a queryset
-```python
-from cloc import grp
-from cloc.viewsets import ReadOnlyViewset, GrpQueryset
-
-@grp('cli')
-def cli():
-    """user and permissions queryset cli"""
-    pass
-
-@grp('users1')
-def users1():
-    """users1 queryset"""
-    pass
-
-@grp('perms1')
-def perms1():
-    """perms1 queryset"""
-    pass
-
-@grp('users2')
-def users2():
-    """users2 queryset"""
-    pass
-
-@grp('perms2')
-def perms2():
-    """perms2 queryset"""
-    pass
-
-class UserViewset(ReadOnlyViewset):
-    version = '1.0.0'
-    queryset = GrpQueryset
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-class PermissionViewset(ReadOnlyViewset):
-    version = '0.0.1'
-    queryset = GrpQueryset
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-
-uvs1 = UserViewset(users=['user1', 'user2'])
-pvs1 = PermissionViewset(roles=['role1', 'role2'])
-uvs2 = UserViewset(users=['user1', 'user2', 'user3'])
-pvs2 = PermissionViewset(roles=['role1', 'role2', 'role3'])
-
-perms1.add_command(pvs1)
-users1.add_command(uvs1)
-users1.add_command(perms1)
-
-perms2.add_command(pvs2)
-users2.add_command(uvs2)
-users2.add_command(perms2)
-
-cli.add_command(users1)
-cli.add_command(users2)
-
-if __name__ == '__main__':
-    cli()
-```
-```bash
-$ python example2.py users1 list
-'users' user1, user2
-'version' 1.0.0
-
-$ python example2.py users2 list
-'users' user1, user2, user3
-'version' 1.0.0
-
-```
-<br>
-
-
-<!--
-
-
-<a name="cloc_cmd"></a>
-### cloc.core.Cmd(name: str, fn: Callable, params: Params= None, hidden: bool= False)
-
-This is the core class for creating new commands that can invoke a defined function. 
--->

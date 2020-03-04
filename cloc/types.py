@@ -26,9 +26,8 @@ class BaseType(object):
     def __init__(self, basetype: Any= None):
         defaultattr(self, 'basetype', basetype)
 
-    def convert(self, value: str):
-        """
-        overload function for new type cast for param input
+    def __call__(self, value: str):
+        """overload __call__ for converting to new type
 
         Args:
             value {str} -- value to convert
@@ -42,7 +41,7 @@ class Choices(BaseType):
         super().__init__(basetype)
         self.choices = set(choices)
 
-    def convert(self, value: str):
+    def __call__(self, value: str):
         if value not in self.choices:
             trace(f'Error: {value!r} was not found in choices: {", ".join(self.choices)!r}',  TypeError)
         return value
@@ -56,7 +55,7 @@ class FileType(BaseType):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.fobj.close()
 
-    def convert(self, filepath: str):
+    def __call__(self, filepath: str):
         if not os.path.exists(filepath):
             trace(f'Error: {filepath!r} does not  exists', TypeError)
         elif not os.path.isfile(filepath):
@@ -71,7 +70,7 @@ class IntRangeType(BaseType):
     def __init__(self):
         super().__init__(int)
 
-    def convert(self, value: Union[str, int]):
+    def __call__(self, value: Union[str, int]):
         if isinstance(value, str):
             vals = value.split(',')
             if len(vals) == 1:
@@ -92,7 +91,7 @@ class DateType(BaseType):
     def __init__(self):
         super().__init__(datetime)
 
-    def convert(self, value: str):
+    def __call__(self, value: str):
         patterns = ('%Y-%m-%d', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S')
         for p in patterns:
             try:
@@ -108,7 +107,7 @@ class Sha256Type(BaseType):
     def __init__(self):
         super().__init__(str)
 
-    def convert(self, value: str):
+    def __call__(self, value: str):
         if value and isinstance(value, str):
             if os.path.exists(value):
                 if os.path.isfile(value):
@@ -131,7 +130,7 @@ class UrlType(BaseType):
     def __init__(self):
         super().__init__(str)
 
-    def convert(self, value: str):
+    def __call__(self, value: str):
         if URL_PATTERN.match(value):
             return value
         trace(f'{value!r} is not a valid URL', TypeError)
@@ -143,7 +142,7 @@ class JsonType(BaseType):
     def __init__(self):
         super().__init__(dict)
 
-    def convert(self, value: Union[str, dict]):
+    def __call__(self, value: Union[str, dict]):
         try:
             if isinstance(value, dict):
                 return value
