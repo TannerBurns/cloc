@@ -32,6 +32,8 @@
             - [ Cmd.fn ](#cloc_cmd_fn)
             - [ Cmd.dataclass ](#cloc_cmd_dataclass)
             - [ Cmd.new_dataclass_cmd ](#cloc_cmd_new_dataclass_cmd)
+            - [ Cmd.create_regex_patterns ](#cloc_cmd_create_regex_patterns)
+            - [ Cmd.get_values ](#cloc_cmd_get_values)
         - [ cloc.core.Grp ](#cloc_grp)
             - [ Grp.commands ](#cloc_grp_commands)
             - [ Grp.invoke ](#cloc_grp_invoke)
