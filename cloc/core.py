@@ -4,8 +4,7 @@ import re
 from colored import fg, style
 from typing import Any, Callable, NamedTuple, List, Union
 
-from cloc.utils import defaultattr, trace
-from cloc.types import BaseType
+from cloc.utils import defaultattr, trace, echo
 
 
 class BaseArg(object):
@@ -22,7 +21,7 @@ class BaseArg(object):
     type: Any
     help: str
 
-    def __init__(self, name: str, type: Any = None, help: str = None):
+    def __init__(self, name: str, type: Any = str, help: str = None):
         defaultattr(self, 'name', name)
         defaultattr(self, 'type', type)
         defaultattr(self, 'help', help)
@@ -39,7 +38,7 @@ class Opt(BaseArg):
     multiple: bool
     required: bool
 
-    def __init__(self, name: str, short_name: str, type: Any = None, default: Any= None,
+    def __init__(self, name: str, short_name: str, type: Any = str, default: Any= None,
                  multiple: bool= False, required: bool= False, help: str = None):
         super().__init__(name, type, help)
         defaultattr(self, 'short_name', short_name)
@@ -69,6 +68,7 @@ class Params(NamedTuple):
     """Params - Inherits from NamedTuple, holds the order of the arg, opt, or flg as they are declared
     """
     order: List[Union[Arg, Opt]]
+
 
 class BaseCmd(object):
     """BaseCmd - Base implementation of a full command that may or may not include one to many arg, opt, or flg
@@ -102,91 +102,19 @@ class BaseCmd(object):
         """_print_help - protected method to print the built help string
             this could in theory be overloaded to also add content to help string before print
         """
-        print(self.help)
-        sys.exit(0)
+        trace(self.help)
 
-    def create_params_regex(self):
+    def create_regex_patterns(self):
         """This is to be implemented by classes that inherit BaseCmd"""
         pass
-
-    def  create_help(self):
-        """This is to be implemented by classes that inherit BaseCmd"""
-        pass
-
-    def get_params_values(self, cmdl: list):
-        """This is to be implemented by classes that inherit BaseCmd"""
-        pass
-
-    def _parse(self, cmdl: list):
-        """_parse - protected method to initialize the BaseCmd (creates help msg, create param regex patters, and
-           get parameter values from the input into parse -> should represent a command line in the state it is in.
-
-           Args:
-            cmdl {list} -- the state of the command line
-        """
-        self.create_help()
-        self.create_params_regex()
-        self.get_params_values(cmdl)
-
-class Cmd(BaseCmd):
-    """Cmd - Inherits from BaseCmd, will implement a start method to invoke the command
-
-       Args:
-        fn {Callable} -- the function that got originally decorated
-        dataclass {object} -- a Cmd can also become a dataclass Cmd that will allow commands to inherit a self
-            attribute which will be added to self.values[0]. This allows commands to become tied to objects to allow
-            manipulation of class attributes
-    """
-    fn: Callable
-    dataclass: object
-
-    def __init__(self, name: str, fn: Callable, params: Params = None, hidden: bool = False):
-        super().__init__(name, params, hidden)
-        self.fn = defaultattr(self, 'fn',  fn)
-        self.dataclass = None
-
-    def start(self, cmdl: list):
-        """start - This method will invoke the command with the given cmdl state
-            cmdl {list} -- the current state of the command line
-
-            1. _parse - call method to initialize command
-            2. add dataclass to values if it is a dataclass cmd
-            3. call fn with values if exists or fn without args if None
-
-            if self has the attribute of dataclass set, values[0] = dataclass = class that is connected to command
-            now command should have a self as first arg or this will override first arg
-
-        """
-        self._parse(cmdl)
-
-        # this should represent 'self' for the command about to start
-        if self.dataclass:
-            self.values.insert(0, self.dataclass)
-
-        if self.values:
-            self.fn(*self.values)
-        else:
-            self.fn()
-
-    @classmethod
-    def new_dataclass_cmd(cls, name: str, fn: Callable, params: Params= None, hidden: bool= False, dataclass= None):
-        """new_dataclass_cmd - get a new cls of Cmd that is tied to another class
-            name {str} -- name used to invoke and track command
-            hidden {bool} -- False = Command will be shown; True = Command will not be shown but can be invoked
-            params {Params} -- Params declared by the user [arg, opt, and/or flg]
-            dataclass {object} -- new command dataclass = dataclass
-        """
-        nc = cls(name, fn, params, hidden)
-        nc.dataclass = dataclass
-        return nc
 
     def create_help(self):
-        """create_help - overloaded from inheritance
+        """create_help - a formatted and colored help string, can be overloaded for different formatting
 
            this will iteratively create a help string with
-            1. usage
-            2. name
-            3. docstring
+            1. name
+            2. docstring
+            3. usage
             4. parameters
 
         """
@@ -216,8 +144,77 @@ class Cmd(BaseCmd):
         usagestr += f'{style.RESET}\n'
         self.help = namestr + docstr + usagestr + paramstr + cmd_tbl
 
-    def create_params_regex(self):
-        """create_params_regex - create regex patterns for each opt and flg param
+    def get_values(self, cmdl: list):
+        """This is to be implemented by classes that inherit BaseCmd"""
+        pass
+
+    def _parse(self, cmdl: list):
+        """_parse - protected method to initialize the BaseCmd (creates help msg, create param regex patters, and
+           get parameter values from the input into parse -> should represent a command line in the state it is in.
+
+           Args:
+            cmdl {list} -- the state of the command line
+        """
+        self.create_help()
+        self.create_regex_patterns()
+        self.get_values(cmdl)
+
+class Cmd(BaseCmd):
+    """Cmd - Inherits from BaseCmd, will implement a start method to invoke the command
+
+       Args:
+        fn {Callable} -- the function that got originally decorated
+        dataclass {object} -- a Cmd can also become a dataclass Cmd that will allow commands to inherit a self
+            attribute which will be added to self.values[0]. This allows commands to become tied to objects to allow
+            manipulation of class attributes
+    """
+    fn: Callable
+    dataclass: object
+
+    def __init__(self, name: str, fn: Callable, params: Params = None, hidden: bool = False):
+        super().__init__(name, params, hidden)
+        self.fn = defaultattr(self, 'fn',  fn)
+        self.dataclass = None
+
+    def __call__(self, cmdl: list = None):
+        """This method will invoke the command with the given cmdl state
+            cmdl {list} -- the current state of the command line
+
+            1. _parse - call method to initialize command
+            2. add dataclass to values if it is a dataclass cmd
+            3. call fn with values if exists or fn without args if None
+
+            if self has the attribute of dataclass set, values[0] = dataclass = class that is connected to command
+            now command should have a self as first arg or this will override first arg
+
+        """
+        cmdl = cmdl or sys.argv[1:]
+        self._parse(cmdl)
+
+        # this should represent 'self' for the command about to start
+        if self.dataclass:
+            self.values.insert(0, self.dataclass)
+
+        if self.values:
+            self.fn(*self.values)
+        else:
+            self.fn()
+
+    @classmethod
+    def new_dataclass_cmd(cls, name: str, fn: Callable, params: Params= None,
+                          hidden: bool= False, dataclass: object= None):
+        """new_dataclass_cmd - get a new cls of Cmd that is tied to another class
+            name {str} -- name used to invoke and track command
+            hidden {bool} -- False = Command will be shown; True = Command will not be shown but can be invoked
+            params {Params} -- Params declared by the user [arg, opt, and/or flg]
+            dataclass {object} -- new command dataclass = dataclass
+        """
+        nc = cls(name, fn, params, hidden)
+        nc.dataclass = dataclass
+        return nc
+
+    def create_regex_patterns(self):
+        """create_regex_patterns - create regex patterns for each opt and flg param
             - this allows an easy matching on the entire command line string to opt and flg
             - an empty entry means there was an arg in place, this is indexed for double check later on
         """
@@ -234,22 +231,8 @@ class Cmd(BaseCmd):
                         rgx_pattern += f'-{p.short_name.replace("-", "")})'
                     self.regex_patterns.insert(0, rgx_pattern)
 
-    def _convert_type(self, value: Any, index: int):
-        """_convert_type - protected method to convert the incoming command line value to the desired  type
-            value {Any} - value from command line
-            index {int} - index in params order to retrieve type to convert
-
-            check if the type is a builtin and then call builtin on value,
-            if custom type is an instance cloc.BaseType then convert the value to the new type
-        """
-        if 'builtins' == self.params.order[index].type.__class__.__module__:
-            value = self.params.order[index].type(value)
-        elif isinstance(self.params.order[index].type, BaseType):
-            value = self.params.order[index].type.convert(value)
-        return value
-
-    def get_params_values(self, cmdl: list):
-        """get_params_values - overloaded function, this method will create the values to be unpacked
+    def get_values(self, cmdl: list):
+        """get_values - overloaded function, this method will create the values to be unpacked
            into the Cmd function. If --help is anywhere is cmdl, the help message will be printed.
            This helps short circuit if you remember some but not all parameters to a Cmd
 
@@ -268,15 +251,15 @@ class Cmd(BaseCmd):
                         msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
                         trace(msg, AssertionError, color='red')
                     if cmdl[index]:
-                        self.values.append(self._convert_type(cmdl[index], index))
+                        self.values.append(self.params.order[index].type(cmdl[index]))
                 if isinstance(self.params.order[index], Opt):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches and len(matches) > 0:
                         if self.params.order[index].multiple:
-                            match_list = [m[1] for m in matches]
+                            match_list = [self.params.order[index].type(m[1]) for m in matches]
                             self.values.append(match_list)
                         else:
-                            self.values.append(self._convert_type(matches[0][1], index))
+                            self.values.append(self.params.order[index].type(matches[0][1]))
                     else:
                         if self.params.order[index].required:
                             msg = f'{self.params.order[index].name!r} is required'
@@ -285,7 +268,7 @@ class Cmd(BaseCmd):
                             if self.params.order[index].default is None:
                                 self.values.append(None)
                             else:
-                                self.values.append(self._convert_type(self.params.order[index].default, index))
+                                self.values.append(self.params.order[index].type(self.params.order[index].default))
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches:
@@ -330,11 +313,9 @@ class Grp(BaseCmd):
         if self.invoke:
             cmd = self.get_command(self.invoke)
             if cmd:
-                if isinstance(cmd, Grp):
-                    cmd(self.cmdl)
-                if isinstance(cmd, Cmd):
-                    cmd.start(self.cmdl)
+                cmd(self.cmdl)
         else:
+            echo(f'command {self.invoke!r} was not found', color='red')
             self._print_help()
 
     def add_command(self, command: BaseCmd, hidden:bool= None):
@@ -400,8 +381,8 @@ class Grp(BaseCmd):
         cmd_tbl += f'{style.RESET}'
         self.help = namestr + docstr + usagestr + cmdstr + cmd_tbl
 
-    def get_params_values(self, cmdl: list):
-        """get_params_values - overloaded function, from the command line state, get the command to invoke and set name
+    def get_values(self, cmdl: list):
+        """get_values - overloaded function, from the command line state, get the command to invoke and set name
 
            Args:
             cmdl {list} -- cmdl state
