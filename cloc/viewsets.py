@@ -72,30 +72,6 @@ class ReqSessionViewset(GrpViewset, mixins.Version):
             self.session.mount("https://", session_adapters)
             self.session.mount('http://', session_adapters)
 
-    def refresh_token(self):
-        """Use this to add to verify auth is still valid or refresh if out of date.
-        :return:
-        """
-        pass
-
-    def _make_request(self, request_call, url, **request_kwargs) -> requests.Response:
-        """Makes an http request, suppress errors and include content.
-        :param session_call: URL the POST request will be made.
-        :return: Response
-        """
-        try:
-            response = request_call(url, **request_kwargs)
-            if response.status_code == 401:
-                self.refresh_token()
-            return response
-        except Exception as e:
-            if self.raise_exception:
-                raise
-            else:
-                response =  requests.Response()
-                response.url = url
-                response._content = str(e).encode('utf-8')
-
     @cmd('get')
     @arg('url', type=Url, help='url for get requests')
     @opt('--headers', '-hd', type=Json, default={}, help='headers for get request')
@@ -103,7 +79,7 @@ class ReqSessionViewset(GrpViewset, mixins.Version):
     @opt('--data', '-d', type=Json, default={}, help='data for get requests')
     def get_command(self, url: Url, headers: Json, params: Json, data: Json):
         """session get requests"""
-        echo(self._make_request(self.session.get, url, headers=headers, params=params, data=data).json())
+        echo(self.session.get(url, headers=headers, params=params, data=data).json())
 
 
 

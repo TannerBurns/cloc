@@ -46,15 +46,34 @@
         - [ cloc.decorators.arg ](#decorators_arg)
         - [ cloc.decorators.opt ](#decorators_opt)
         - [ cloc.decorators.flg ](#decorators_flg)
+    - [ Types ](#cloc.types_2119495137)
+        - [ cloc.types.BaseType ](#cloc.types.BaseType_1669657826)
+            - [ BaseType.__call__ ](#BaseType.__call___1591412620)
+        - [ cloc.types.Choices ](#cloc.types.Choices_1347752155)
+        - [ cloc.types.DateType ](#cloc.types.DateType_974986765)
+        - [ cloc.types.FileType ](#cloc.types.FileType_442405428)
+            - [ FileType.__exit__ ](#FileType.__exit___1883566034)
+        - [ cloc.types.IntRangeType ](#cloc.types.IntRangeType_483716711)
+        - [ cloc.types.JsonType ](#cloc.types.JsonType_806135893)
+        - [ cloc.types.Sha256Type ](#cloc.types.Sha256Type_897860609)
+        - [ cloc.types.UrlType ](#cloc.types.UrlType_1780703823)
+    - [ Mixins ](#cloc.mixins_1324909550)
+        - [ cloc.mixins.Echo ](#cloc.mixins.Echo_178880302)
+        - [ cloc.mixins.List ](#cloc.mixins.List_1486997353)
+        - [ cloc.mixins.Version ](#cloc.mixins.Version_1196404455)
+    - [ Viewsets ](#cloc.viewsets_343292859)
+        - [ cloc.viewsets.GrpViewset ](#cloc.viewsets.GrpViewset_226248766)
+        - [ cloc.viewsets.ReadOnlyViewset ](#cloc.viewsets.ReadOnlyViewset_1582907420)
+        - [ cloc.viewsets.ReqSessionViewset ](#cloc.viewsets.ReqSessionViewset_902305522)
     - [ Helper Function ](#helper_function)
         - [ cloc.utils.echo ](#utils_echo)
         - [ cloc.utils.trace ](#utils_trace)
         - [ cloc.utils.listattrs ](#utils_listattrs)
         - [ cloc.utils.defaultattr ](#utils_defaultattr)
 - [ Advanced Usage Examples ](#examples)
-    - [ Viewset Example ](#viewset-example)
-    - [ Queryset Example ](#queryset-example)
-<br><br>
+    - [ Viewset Example ](#viewset_example)
+    
+<br>
 
 <a name="install"></a>
 ## Installation
@@ -326,6 +345,175 @@ Returns a Cmd object. If the object being decorated is already a Cmd object, the
 ##### `cloc.decorators.flg(name:str, short_name: str, help: str= None)`
 
 Returns a Cmd object. If the object being decorated is already a Cmd object, the Flg will be appended to Cmd.params
+
+---
+
+<a name="cloc.types_2119495137"></a>
+## Types
+
+New types can be made to be used to convert the command line input. A new cloc type must inherit the 
+`cloc.types.BaseType` and overload the `__call__` function to convert the input. New types can raise an exception or 
+print to trace for a clean exit.
+
+<a name="cloc.types.BaseType_1669657826"></a>
+### cloc.types.BaseType(self, basetype: Any = None)
+
+BaseType - BaseType object for creating new Param types
+
+       __call__ method should be overloaded to handle value; str -> BaseType
+    
+
+<a name="BaseType.__call___1591412620"></a>
+#### `BaseType.__call__(self, value: str)`
+
+convert to new type
+
+        Args:
+            value {str} -- value to convert
+        
+
+<a name="cloc.types.Choices_1347752155"></a>
+### cloc.types.Choices(self, choices: list, basetype: Any = typing.Any)
+
+Convert input into a Choices object which will verify the input is contained in the defined choices.
+
+
+<a name="cloc.types.DateType_974986765"></a>
+### cloc.types.DateType(self)
+
+Convert input into a DateTime object
+
+
+<a name="cloc.types.FileType_442405428"></a>
+### cloc.types.FileType(self)
+
+Convert input into a file object. The below example is the `cloc.types.FileType` implementation
+
+```python
+class FileType(BaseType):
+    __name__ = 'cloc.File'
+
+    def __init__(self):
+        # init should provide a base type, default to str
+        super().__init__(io.TextIOWrapper)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.fobj.close()
+
+    def __call__(self, filepath: str):
+        if not os.path.exists(filepath):
+            trace(f'Error: {filepath!r} does not  exists', TypeError)
+        elif not os.path.isfile(filepath):
+            trace(f'Error: {filepath!r} is not a file', TypeError)
+        self.fobj = open(filepath, 'r')
+        return self.fobj
+```
+
+<a name="FileType.__exit___1883566034"></a>
+#### `FileType.__exit__(self, exc_type, exc_val, exc_tb)`
+
+File object will be closed in the exit function for the FileType class
+
+<a name="cloc.types.IntRangeType_483716711"></a>
+### cloc.types.IntRangeType(self)
+
+Convert input to an Int Range [0 ... 5]
+
+<a name="cloc.types.JsonType_806135893"></a>
+### cloc.types.JsonType(self)
+
+Convert input to type dict
+
+<a name="cloc.types.Sha256Type_897860609"></a>
+### cloc.types.Sha256Type(self)
+
+Convert input into valid sha256, or if file path is found as input all valid sha256 values in the file
+
+<a name="cloc.types.UrlType_1780703823"></a>
+### cloc.types.UrlType(self)
+
+Convert input into a valid URL
+
+---
+
+<a name="cloc.mixins_1324909550"></a>
+## Mixins
+
+Cloc mixins are a simple way to inherit cli functionality to your class. Below is an example of a Version mixin.
+This enables a class to inherit a 'version' cmd. It will then look for the class attribute version and print it to the
+ user.
+
+```python
+class Version(object):
+    """Version Mixin - class object for easily adding an version command to a class
+        - echo the 'version' attribute if it exists
+    """
+
+    def __call__(self):
+        return self.version_cmd
+
+    @cmd('version')
+    def version_cmd(self):
+        """version mixin command"""
+        echo(cls=self, attribute='version', color='blue')
+```
+
+The below mixins are currently offered by cloc.
+
+<a name="cloc.mixins.Echo_178880302"></a>
+### cloc.mixins.Echo(self, *args, **kwargs)
+
+Echo Mixin - class object for easily adding an echo command to a class
+        - echo value of attributes by name
+
+<a name="cloc.mixins.List_1486997353"></a>
+### cloc.mixins.List(self, *args, **kwargs)
+
+List Mixin - class object for easily adding an list command to a class
+        - list attributes and values of the tied class
+
+<a name="cloc.mixins.Version_1196404455"></a>
+### cloc.mixins.Version(self, *args, **kwargs)
+
+Version Mixin - class object for easily adding an version command to a class
+        - echo the 'version' attribute if it exists
+
+---
+
+<a name="cloc.viewsets_343292859"></a>
+## Viewsets
+
+Viewsets are classes of commands that can be inherited into other classes. For example if you have a class that you
+want to be able to query information from but not write to, you could use a ReadOnlyViewset that only gives the user
+the option the print and list attributes from the class.
+
+A viewset can also be made into a Queryset if the `GrpViewset` is inherited and the queryset attribute is set.
+This then enables a user to override methods to retrieve data for the cli interface. A queryset could connect to a
+database to retrieve information for the user based on defined commands.
+
+Viewsets and Querysets become very useful in large CLI applications.
+
+<a name="cloc.viewsets.GrpViewset_226248766"></a>
+### cloc.viewsets.GrpViewset(self, *args, **kwargs)
+
+A base Viewset that does not have any commands by default. The GrpViewset contains the queryset attribute and can be 
+set for overloading data retrieval.
+
+
+<a name="cloc.viewsets.ReadOnlyViewset_1582907420"></a>
+### cloc.viewsets.ReadOnlyViewset(self, *args, **kwargs)
+
+Read only viewset
+    echo (print attribute by name)
+    list (print all attribute names and values)
+    version(print the current version of the Viewset based on the version attribute)
+
+
+<a name="cloc.viewsets.ReqSessionViewset_902305522"></a>
+### cloc.viewsets.ReqSessionViewset(self, *args, session: requests.sessions.Session = None, max_retries: int = 3, pool_connections: int = 16, pool_maxsize: int = 16, raise_exception: bool = True, **kwargs)
+
+Requests Session Viewset
+    get (a cli cmd for session.get)
 
 ---
 
