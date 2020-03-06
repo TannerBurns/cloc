@@ -2,24 +2,6 @@ from typing import Any, Callable, Union
 
 from cloc.core import Arg, Cmd, Grp, Opt, Flg, Params
 
-def _create_cmd(name:str, fn:Callable, param:Union[Arg, Flg, Opt], hidden:bool=False) -> Cmd:
-    """_create_cmd - method to create a new Cmd
-
-       Args:
-        name {str} -- name to give Cmd
-        fn {Callable} -- function for Cmd to invoke
-        param {Union[Arg, Flg, Opt]} -- parameter if any to add to Cmd
-        hidden {bool} -- flag to hide Cmd
-
-        returns:
-            Cmd -- new Cmd
-    """
-    if param:
-        cmd = Cmd(name, fn, params=Params([param]), hidden=hidden)
-    else:
-        cmd = Cmd(name, fn, hidden=hidden)
-    cmd.__doc__ = fn.__doc__
-    return cmd
 
 class opt(object):
     """opt - decorator for creating a new Opt parameter
@@ -37,11 +19,11 @@ class opt(object):
         self.Opt = Opt(name, short_name, type, default, multiple, required, help)
 
     def __call__(self, f):
-        if isinstance(f, Cmd):
-            f.params.order.insert(0, self.Opt)
+        if isinstance(f, Params):
+            f.order.insert(0, self.Opt)
             return f
         else:
-            return _create_cmd(None, f, self.Opt)
+            return Params(f, [self.Opt])
 
 class flg(object):
     """flg - decorator for creating a new Flg parameter
@@ -55,11 +37,11 @@ class flg(object):
         self.Flg = Flg(name, short_name, help)
 
     def __call__(self, f):
-        if isinstance(f, Cmd):
-            f.params.order.insert(0, self.Flg)
+        if isinstance(f, Params):
+            f.order.insert(0, self.Flg)
             return f
         else:
-            return _create_cmd(None, f, self.Flg)
+            return Params(f, [self.Flg])
 
 class arg(object):
     """arg - decorator for creating a new Arg parameter
@@ -73,11 +55,11 @@ class arg(object):
         self.Arg = Arg(name, type, help)
 
     def __call__(self, f):
-        if isinstance(f, Cmd):
-            f.params.order.insert(0, self.Arg)
+        if isinstance(f, Params):
+            f.order.insert(0, self.Arg)
             return f
         else:
-            return _create_cmd(None, f, self.Arg)
+            return Params(f, [self.Arg])
 
 class cmd(object):
     """cmd - decorator for creating a new Cmd
@@ -92,11 +74,11 @@ class cmd(object):
 
     def __call__(self, f):
         if isinstance(f, Cmd):
-            f.name = self.name
-            f.hidden = self.hidden
             return f
+        elif isinstance(f, Params):
+            return Cmd.create_new_cmd(self.name, f.fn, params=f, hidden=self.hidden)
         else:
-            return _create_cmd(self.name, f, None, hidden=self.hidden)
+            return Cmd.create_new_cmd(self.name, f, hidden=self.hidden)
 
 class grp(object):
     """grp - decorator for creating a new Grp
@@ -110,7 +92,12 @@ class grp(object):
         self.hidden  = hidden
 
     def __call__(self, f):
-        grp = Grp(self.name, hidden=self.hidden)
-        grp.__doc__ = f.__doc__
+
+        if isinstance(f, Grp):
+            return f
+        elif isinstance(f, Params):
+            return Grp.create_new_grp(self.name, f.fn, params=f, hidden=self.hidden)
+        else:
+            return Grp.create_new_grp(self.name, f, hidden=self.hidden)
         return grp
 

@@ -67,7 +67,8 @@ class Flg(BaseArg):
 class Params(NamedTuple):
     """Params - Inherits from NamedTuple, holds the order of the arg, opt, or flg as they are declared
     """
-    order: List[Union[Arg, Opt]]
+    fn: Callable
+    order: List[Union[Arg, Opt, Flg]]
 
 
 class BaseCmd(object):
@@ -105,8 +106,22 @@ class BaseCmd(object):
         trace(self.help)
 
     def create_regex_patterns(self):
-        """This is to be implemented by classes that inherit BaseCmd"""
-        pass
+        """create_regex_patterns - create regex patterns for each opt and flg param
+            - this allows an easy matching on the entire command line string to opt and flg
+            - an empty entry means there was an arg in place, this is indexed for double check later on
+        """
+        escape_dash = '\\-'
+        if hasattr(self, 'params'):
+            if hasattr(self.params, 'order'):
+                for p in reversed(self.params.order):
+                    rgx_pattern = ''
+                    if isinstance(p, Opt):
+                        rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
+                        rgx_pattern += f'-{p.short_name.replace("-", "")}) ([\S]*)'
+                    elif isinstance(p, Flg):
+                        rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
+                        rgx_pattern += f'-{p.short_name.replace("-", "")})'
+                    self.regex_patterns.insert(0, rgx_pattern)
 
     def create_help(self):
         """create_help - a formatted and colored help string, can be overloaded for different formatting
@@ -173,8 +188,9 @@ class Cmd(BaseCmd):
 
     def __init__(self, name: str, fn: Callable, params: Params = None, hidden: bool = False):
         super().__init__(name, params, hidden)
-        self.fn = defaultattr(self, 'fn',  fn)
+        self.fn = fn
         self.dataclass = None
+        self.__doc__ = fn.__doc__
 
     def __call__(self, cmdl: list = None):
         """This method will invoke the command with the given cmdl state
@@ -203,9 +219,14 @@ class Cmd(BaseCmd):
             self.fn()
 
     @classmethod
-    def new_dataclass_cmd(cls, name: str, fn: Callable, params: Params= None,
-                          hidden: bool= False, dataclass: object= None):
-        """new_dataclass_cmd - get a new cls of Cmd that is tied to another class
+    def create_new_cmd(cls, name: str, fn: Callable, params: Params= None,
+                          hidden: bool= False):
+        return cls(name, fn, params=params, hidden=hidden)
+
+    @classmethod
+    def create_new_dataclass_cmd(cls, name: str, fn: Callable, params: Params= None,
+                                 hidden: bool= False, dataclass: object= None):
+        """create_new_dataclass_cmd - get a new cls of Cmd that is tied to another class
 
            Args:
             name {str} -- name used to invoke and track command
@@ -216,24 +237,6 @@ class Cmd(BaseCmd):
         nc = cls(name, fn, params, hidden)
         nc.dataclass = dataclass
         return nc
-
-    def create_regex_patterns(self):
-        """create_regex_patterns - create regex patterns for each opt and flg param
-            - this allows an easy matching on the entire command line string to opt and flg
-            - an empty entry means there was an arg in place, this is indexed for double check later on
-        """
-        escape_dash = '\\-'
-        if hasattr(self, 'params'):
-            if hasattr(self.params, 'order'):
-                for p in reversed(self.params.order):
-                    rgx_pattern = ''
-                    if isinstance(p, Opt):
-                        rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
-                        rgx_pattern += f'-{p.short_name.replace("-", "")}) ([\S]*)'
-                    elif isinstance(p, Flg):
-                        rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
-                        rgx_pattern += f'-{p.short_name.replace("-", "")})'
-                    self.regex_patterns.insert(0, rgx_pattern)
 
     def get_values(self, cmdl: list):
         """get_values - overloaded function, this method will create the values to be unpacked
@@ -294,10 +297,16 @@ class Grp(BaseCmd):
     commands: List[Cmd]
     invoke: str
     cmdl: list
+    fn: Callable
+    params: Params
 
-    def __init__(self, name: str, commands: List[Cmd] = None, hidden:bool= False):
-        super().__init__(name, hidden=hidden)
+    def __init__(self, name: str, fn: Callable, commands: List[Cmd] = None, params: Params= None, hidden:bool= False):
+        super().__init__(name, params=params, hidden=hidden)
         self.commands = defaultattr(self, 'commands', commands or [])
+        self.fn = fn
+        self.params = params
+        self.__doc__ = fn.__doc__
+        self.invoke = ''
 
     def __call__(self, cmdl: list= None):
         """__call__ overloading call method to make a Grp hold states and shift the cmdl to another Grp
@@ -312,14 +321,18 @@ class Grp(BaseCmd):
             5. if Grp, call the Cmd with the state of cmdl; if Cmd, call Cmd.start(cmdl) to invoke the command
 
         """
+        # need to rework to also call grp function to chain both and allow grp to have opt and flg
         self.cmdl = cmdl or sys.argv[1:]
         self._parse(self.cmdl)
+        self.fn(*self.values)
         if self.invoke:
             cmd = self.get_command(self.invoke)
             if cmd:
                 cmd(self.cmdl)
+            else:
+                echo(f'command {self.invoke!r} was not found', color='red')
+                self._print_help()
         else:
-            echo(f'command {self.invoke!r} was not found', color='red')
             self._print_help()
 
     def add_command(self, command: BaseCmd, hidden:bool= None):
@@ -340,7 +353,7 @@ class Grp(BaseCmd):
             for method_name in dir(command):
                 method = getattr(command, method_name)
                 if isinstance(method, (Grp, Cmd)):
-                    cmd = method.new_dataclass_cmd(method.name, method.fn, method.params, method.hidden, command)
+                    cmd = method.create_new_dataclass_cmd(method.name, method.fn, method.params, method.hidden, command)
                     cmd.__doc__ = method.__doc__
                     if hidden:
                         cmd.hidden = hidden
@@ -376,15 +389,37 @@ class Grp(BaseCmd):
         """
         namestr = f'\n{fg("green")}{self.name.title()}{style.RESET}\n'
         docstr = f'\n{fg("yellow")}\t{self.__doc__}{style.RESET}\n'
-        usagestr = f'\n{fg("blue")}USAGE: {self.name.upper()} NAME{style.RESET}\n'
+        usagestr = f'\n{fg("blue")}USAGE: {self.name} '
         cmdstr = f'\n{fg("red")}Commands:{style.RESET}\n'
-        cmd_tbl = f'{fg("red")}| {"Name":<24} | {"Description":<52} |\n'
-        cmd_tbl += f'| {"-"*24} | {"-"*52} |\n'
+        grp_tbl = f'{fg("red")}| {"Name":<24} | {"Description":<52} |\n'
+        grp_tbl += f'| {"-"*24} | {"-"*52} |\n'
+        paramstr = ''
+        cmd_tbl = ''
+        if getattr(self, 'params'):
+            paramstr += f'\n{fg("red")}Parameters:{style.RESET}\n'
+            cmd_tbl += f'| {"Name":<18} | {"Short":<8} | {"Type":<16} | {"Help":<54} |\n'
+            cmd_tbl += f'| {"-" * 18} | {"-" * 8} | {"-" * 16} | {"-" * 54} |\n'
+            for p in self.params.order:
+                if isinstance(p, Arg):
+                    usagestr += f'{p.name} '
+                    cmd_tbl += f'| {p.name:<18} | {" " * 8} | {p.type.__name__:<16} | {p.help:<54} |\n'
+                if isinstance(p, Opt):
+                    usagestr += f'{p.name}|{p.short_name} [value] '
+                    cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
+                    attr = 'default'
+                    cmd_tbl += f'{"[default: " + str(p.default) + "] " + str(p.help):<54} |\n'
+                if isinstance(p, Flg):
+                    usagestr += f'{p.name}|{p.short_name} '
+                    cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
+                    cmd_tbl += f'{f"[flag] " + p.help:<54} |\n'
+
+        usagestr += f'{style.RESET}\n'
+
         for c in self.commands:
-            cmd_tbl += f'{fg("red")}| {style.RESET}{c.name:<24} {fg("red")}| '
-            cmd_tbl += f'{style.RESET}{"".join(str(c.__doc__)[:50]):<52} {fg("red")}|\n'
-        cmd_tbl += f'{style.RESET}'
-        self.help = namestr + docstr + usagestr + cmdstr + cmd_tbl
+            grp_tbl += f'{fg("red")}| {style.RESET}{c.name:<24} {fg("red")}| '
+            grp_tbl += f'{style.RESET}{"".join(str(c.__doc__)[:50]):<52} {fg("red")}|\n'
+        grp_tbl += f'{style.RESET}'
+        self.help = namestr + docstr + usagestr + paramstr + cmd_tbl + cmdstr + grp_tbl
 
     def get_values(self, cmdl: list):
         """get_values - overloaded function, from the command line state, get the command to invoke and set name
@@ -392,14 +427,54 @@ class Grp(BaseCmd):
            Args:
             cmdl {list} -- cmdl state
 
-            if nothing is found in command line state or --help is found, print help
-            if a command is found, update state of cmdl setting new cmdl = cmdl[1:]
         """
-        if len(cmdl) == 0 or (len(cmdl) > 0 and '--help' == cmdl[0]):
-            self._print_help()
-        if len(cmdl) > 0 and cmdl[0] in self.get_command_names():
-            self.invoke = cmdl[0]
-            self.cmdl = cmdl[1:]
-        else:
-            self._print_help()
 
+        cur_state = []
+        cmd_names = self.get_command_names()
+        for index in range(0, len(cmdl)):
+            if cmdl[index] in cmd_names:
+                cur_state = cmdl[:index]
+                self.invoke = cmdl[index]
+                self.cmdl = cmdl[index:]
+                break
+        if '--help' in cur_state:
+            self._print_help()
+        while len(cur_state) < len(self.params.order):
+            cur_state.append('')
+        for index in range(0, len(self.params.order)):
+            if isinstance(self.params.order[index], Arg):
+                if cur_state[index].startswith('-'):
+                    msg = f'An {"opt"!r} was found: {cur_state[index]!r}, '
+                    msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
+                    trace(msg, AssertionError, color='red')
+                if cur_state[index]:
+                    self.values.append(self.params.order[index].type(cur_state[index]))
+            if isinstance(self.params.order[index], Opt):
+                matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
+                if matches and len(matches) > 0:
+                    if self.params.order[index].multiple:
+                        match_list = [self.params.order[index].type(m[1]) for m in matches]
+                        self.values.append(match_list)
+                    else:
+                        self.values.append(self.params.order[index].type(matches[0][1]))
+                else:
+                    if self.params.order[index].required:
+                        msg = f'{self.params.order[index].name!r} is required'
+                        trace(msg, AssertionError, color='red')
+                    else:
+                        if self.params.order[index].default is None:
+                            self.values.append(None)
+                        else:
+                            self.values.append(self.params.order[index].type(self.params.order[index].default))
+            if isinstance(self.params.order[index], Flg):
+                matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
+                if matches:
+                    self.values.append(True)
+                else:
+                    self.values.append(False)
+
+
+    @classmethod
+    def create_new_grp(cls, name: str, fn: Callable, commands: List[Cmd] = None,
+                       params: Params= None, hidden:bool= False):
+        return cls(name, fn, commands=commands, params=params, hidden=hidden)
