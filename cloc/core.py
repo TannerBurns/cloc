@@ -2,10 +2,9 @@ import sys
 import re
 
 from colored import fg, style
-from typing import Any, Callable, NamedTuple, List, Union
+from typing import Any, Callable, List, Union
 
-from cloc.utils import defaultattr, trace, echo
-
+from cloc.utils import trace, echo
 
 class BaseArg(object):
     """BaseArg - Base implementation of an argument found on the cli
@@ -22,9 +21,9 @@ class BaseArg(object):
     help: str
 
     def __init__(self, name: str, type: Any = str, help: str = None):
-        defaultattr(self, 'name', name)
-        defaultattr(self, 'type', type)
-        defaultattr(self, 'help', help)
+        self.name = name
+        self.type = type
+        self.help = help
 
 class Arg(BaseArg):
     """Arg - A copy of BaseArg used for more explicit naming
@@ -33,7 +32,12 @@ class Arg(BaseArg):
         super().__init__(name, type, help)
 
 class Opt(BaseArg):
-    """Opt - Inherits from BaseArg but also adds a short name and default value attribute
+    """Opt - Inherits from BaseArg but also adds a short name, default, multiple, and required attribute
+
+        short name - an abbreviated shortcut to the cmd
+        default - the default value to use if none is given
+        multiple - return all instances found in command line instead of first
+        require - opt is required in command line for attached Cmd
 
        Args:
         short_name {str} -- short name that can also be used to invoke command
@@ -47,10 +51,10 @@ class Opt(BaseArg):
     def __init__(self, name: str, short_name: str, type: Any = str, default: Any= None,
                  multiple: bool= False, required: bool= False, help: str = None):
         super().__init__(name, type, help)
-        defaultattr(self, 'short_name', short_name)
-        defaultattr(self, 'multiple', multiple)
-        defaultattr(self, 'default', default)
-        defaultattr(self, 'required', required)
+        self.short_name = short_name
+        self.multiple = multiple
+        self.default = default
+        self.required = required
 
 class Flg(BaseArg):
     """Flg - Inherits from BaseArg (very similar to an Opt) but adds a short name and always sets the type to bool
@@ -62,13 +66,40 @@ class Flg(BaseArg):
 
     def __init__(self, name: str, short_name: str, help: str = None):
         super().__init__(name, bool, help)
-        defaultattr(self, 'short_name', short_name)
+        self.short_name = short_name
 
-class Params(NamedTuple):
-    """Params - Inherits from NamedTuple, holds the order of the arg, opt, or flg as they are declared
+class Params(object):
+    """Params - holds the order for parameters given to cmd or grp
     """
     fn: Callable
     order: List[Union[Arg, Opt, Flg]]
+
+    def __init__(self, fn: Callable= None, order: List[Union[Arg, Opt, Flg]]=None):
+        self.fn = fn
+        self.order = order or []
+
+    def get_help(self, name: str):
+        usage = f'\n{fg("blue")}USAGE: {name} '
+        params = ''
+        tbl = ''
+        if self.order:
+            params += f'\n{fg("red")}Parameters:{style.RESET}\n'
+            tbl += f'| {"Name":<18} | {"Short":<8} | {"Type":<16} | {"Help":<54} |\n'
+            tbl += f'| {"-" * 18} | {"-" * 8} | {"-" * 16} | {"-" * 54} |\n'
+            for p in self.order:
+                if isinstance(p, Arg):
+                    usage += f'{p.name} '
+                    tbl += f'| {p.name:<18} | {" " * 8} | {p.type.__name__:<16} | {p.help:<54} |\n'
+                if isinstance(p, Opt):
+                    usage += f'{p.name}|{p.short_name} [value] '
+                    tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
+                    tbl += f'{"[default: " + str(p.default) + "] " + str(p.help):<54} |\n'
+                if isinstance(p, Flg):
+                    usage += f'{p.name}|{p.short_name} '
+                    tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
+                    tbl += f'{f"[flag] " + p.help:<54} |\n'
+        usage += f'{style.RESET}\n'
+        return usage, params + tbl
 
 
 class BaseCmd(object):
@@ -92,9 +123,9 @@ class BaseCmd(object):
     values: list
 
     def __init__(self, name: str, params: Params = None, hidden: bool= False):
-        self.name = defaultattr(self, 'name', name)
-        self.params = defaultattr(self, 'params', params)
-        self.hidden = defaultattr(self, 'hidden', hidden)
+        self.name = name
+        self.params = params
+        self.hidden = hidden
         self.help = ''
         self.regex_patterns = []
         self.values = []
@@ -133,31 +164,10 @@ class BaseCmd(object):
             4. parameters
 
         """
-        namestr = f'\n{fg("green")}{self.name.title()}{style.RESET}\n'
-        docstr = f'\n{fg("yellow")}\t{self.__doc__}{style.RESET}\n'
-        usagestr = f'\n{fg("blue")}USAGE: {self.name} '
-        paramstr = ''
-        cmd_tbl = ''
-        if getattr(self, 'params'):
-            paramstr += f'\n{fg("red")}Parameters:{style.RESET}\n'
-            cmd_tbl += f'| {"Name":<18} | {"Short":<8} | {"Type":<16} | {"Help":<54} |\n'
-            cmd_tbl += f'| {"-" * 18} | {"-" * 8} | {"-" * 16} | {"-" * 54} |\n'
-            for p in self.params.order:
-                if isinstance(p, Arg):
-                    usagestr += f'{p.name} '
-                    cmd_tbl += f'| {p.name:<18} | {" "*8} | {p.type.__name__:<16} | {p.help:<54} |\n'
-                if isinstance(p, Opt):
-                    usagestr += f'{p.name}|{p.short_name} [value] '
-                    cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
-                    attr = 'default'
-                    cmd_tbl += f'{"[default: "+str(p.default)+"] "+str(p.help):<54} |\n'
-                if isinstance(p,  Flg):
-                    usagestr += f'{p.name}|{p.short_name} '
-                    cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
-                    cmd_tbl += f'{f"[flag] "+p.help:<54} |\n'
-
-        usagestr += f'{style.RESET}\n'
-        self.help = namestr + docstr + usagestr + paramstr + cmd_tbl
+        name = f'\n{fg("green")}{self.name.title()}{style.RESET}\n'
+        doc = f'\n{fg("yellow")}\t{self.__doc__}{style.RESET}\n'
+        usage, params = self.params.get_help(self.name)
+        self.help = name + doc + usage + params
 
     def get_values(self, cmdl: list):
         """This is to be implemented by classes that inherit BaseCmd"""
@@ -234,9 +244,9 @@ class Cmd(BaseCmd):
             params {Params} -- Params declared by the user [arg, opt, and/or flg]
             dataclass {object} -- new command dataclass = dataclass
         """
-        nc = cls(name, fn, params, hidden)
-        nc.dataclass = dataclass
-        return nc
+        new_cmd = cls(name, fn, params, hidden)
+        new_cmd.dataclass = dataclass
+        return new_cmd
 
     def get_values(self, cmdl: list):
         """get_values - overloaded function, this method will create the values to be unpacked
@@ -295,15 +305,15 @@ class Grp(BaseCmd):
 
     """
     commands: List[Cmd]
-    invoke: str
     cmdl: list
     fn: Callable
     params: Params
     dataclass: object
+    invoke: str # this is here in the case you want to manually set a cmd to call in self.commands
 
     def __init__(self, name: str, fn: Callable, commands: List[Cmd] = None, params: Params= None, hidden:bool= False):
         super().__init__(name, params=params, hidden=hidden)
-        self.commands = defaultattr(self, 'commands', commands or [])
+        self.commands = commands or []
         self.fn = fn
         self.params = params
         self.__doc__ = fn.__doc__
@@ -353,7 +363,6 @@ class Grp(BaseCmd):
             # look for groups or commands in this class and make them dataclass commands
             for method_name in dir(command):
                 method = getattr(command, method_name)
-                cmd = None
                 if isinstance(method, Cmd):
                     cmd = method.create_new_dataclass_cmd(method.name, method.fn, method.params, method.hidden, command)
                     if cmd:
@@ -390,37 +399,19 @@ class Grp(BaseCmd):
 
         """
         namestr = f'\n{fg("green")}{self.name.title()}{style.RESET}\n'
-        docstr = f'\n{fg("yellow")}\t{self.__doc__}{style.RESET}\n'
-        usagestr = f'\n{fg("blue")}USAGE: {self.name} '
-        cmdstr = f'\n{fg("red")}Commands:{style.RESET}\n' if self.commands else ''
-        grp_tbl = f'{fg("red")}| {"Name":<24} | {"Description":<52} |\n'
-        grp_tbl += f'| {"-"*24} | {"-"*52} |\n'
-        paramstr = ''
-        cmd_tbl = ''
-        if getattr(self, 'params'):
-            paramstr += f'\n{fg("red")}Parameters:{style.RESET}\n'
-            cmd_tbl += f'| {"Name":<18} | {"Short":<8} | {"Type":<16} | {"Help":<54} |\n'
-            cmd_tbl += f'| {"-" * 18} | {"-" * 8} | {"-" * 16} | {"-" * 54} |\n'
-            for p in self.params.order:
-                if isinstance(p, Arg):
-                    usagestr += f'{p.name} '
-                    cmd_tbl += f'| {p.name:<18} | {" " * 8} | {p.type.__name__:<16} | {p.help:<54} |\n'
-                if isinstance(p, Opt):
-                    usagestr += f'{p.name}|{p.short_name} [value] '
-                    cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
-                    cmd_tbl += f'{"[default: " + str(p.default) + "] " + str(p.help):<54} |\n'
-                if isinstance(p, Flg):
-                    usagestr += f'{p.name}|{p.short_name} '
-                    cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
-                    cmd_tbl += f'{f"[flag] " + p.help:<54} |\n'
-
-        usagestr += f'{style.RESET}\n'
-        for c in self.commands:
-            grp_tbl += f'{fg("red")}| {style.RESET}{c.name:<24} {fg("red")}| '
-            grp_tbl += f'{style.RESET}{"".join(str(c.__doc__)[:50]):<52} {fg("red")}|\n'
-        grp_tbl += f'{style.RESET}'
-        grp_tbl = grp_tbl if self.commands else ''
-        self.help = namestr + docstr + usagestr + paramstr + cmd_tbl + cmdstr + grp_tbl
+        doc = f'\n{fg("yellow")}\t{self.__doc__}{style.RESET}\n'
+        cmdstr = ''
+        grp_tbl = ''
+        usage, params = self.params.get_help(self.name)
+        if self.commands:
+            cmdstr += f'\n{fg("red")}Commands:{style.RESET}\n' if self.commands else ''
+            grp_tbl += f'{fg("red")}| {"Name":<24} | {"Description":<52} |\n'
+            grp_tbl += f'| {"-" * 24} | {"-" * 52} |\n'
+            for c in self.commands:
+                grp_tbl += f'{fg("red")}| {style.RESET}{c.name:<24} {fg("red")}| '
+                grp_tbl += f'{style.RESET}{"".join(str(c.__doc__)[:50]):<52} {fg("red")}|\n'
+            grp_tbl += f'{style.RESET}'
+        self.help = namestr + doc + usage + params + cmdstr + grp_tbl
 
     def get_values(self, cmdl: list):
         """get_values - overloaded function, from the command line state, get the command to invoke and set name

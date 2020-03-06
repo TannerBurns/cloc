@@ -79,7 +79,7 @@ class cmd(object):
         elif isinstance(f, Params):
             return Cmd.create_new_cmd(self.name, f.fn, params=f, hidden=self.hidden)
         else:
-            return Cmd.create_new_cmd(self.name, f, hidden=self.hidden)
+            return Cmd.create_new_cmd(self.name, f, params=Params(fn=f), hidden=self.hidden)
 
 class grp(object):
     """grp - decorator for creating a new Grp
@@ -98,5 +98,5 @@ class grp(object):
         elif isinstance(f, Params):
             return Grp.create_new_grp(self.name, f.fn, params=f, hidden=self.hidden)
         else:
-            return Grp.create_new_grp(self.name, f, hidden=self.hidden)
+            return Grp.create_new_grp(self.name, f, params=Params(fn=f), hidden=self.hidden)
 
