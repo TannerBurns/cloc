@@ -5,7 +5,7 @@ import io
 
 from datetime import datetime
 from typing import Any, Union
-from cloc.utils import defaultattr, trace
+from cloc.utils import trace
 
 """
 Types still to make:
