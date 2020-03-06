@@ -1,3 +1,4 @@
+import inspect
 from typing import Any, Callable, Union
 
 from cloc.core import Arg, Cmd, Grp, Opt, Flg, Params
@@ -23,7 +24,7 @@ class opt(object):
             f.order.insert(0, self.Opt)
             return f
         else:
-            return Params(f, [self.Opt])
+            return Params(fn=f, order=[self.Opt])
 
 class flg(object):
     """flg - decorator for creating a new Flg parameter
@@ -41,7 +42,7 @@ class flg(object):
             f.order.insert(0, self.Flg)
             return f
         else:
-            return Params(f, [self.Flg])
+            return Params(fn=f, order=[self.Flg])
 
 class arg(object):
     """arg - decorator for creating a new Arg parameter
@@ -59,7 +60,7 @@ class arg(object):
             f.order.insert(0, self.Arg)
             return f
         else:
-            return Params(f, [self.Arg])
+            return Params(fn=f, order=[self.Arg])
 
 class cmd(object):
     """cmd - decorator for creating a new Cmd
@@ -92,12 +93,10 @@ class grp(object):
         self.hidden  = hidden
 
     def __call__(self, f):
-
         if isinstance(f, Grp):
             return f
         elif isinstance(f, Params):
             return Grp.create_new_grp(self.name, f.fn, params=f, hidden=self.hidden)
         else:
             return Grp.create_new_grp(self.name, f, hidden=self.hidden)
-        return grp
 

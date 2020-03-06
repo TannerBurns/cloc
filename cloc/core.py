@@ -299,6 +299,7 @@ class Grp(BaseCmd):
     cmdl: list
     fn: Callable
     params: Params
+    dataclass: object
 
     def __init__(self, name: str, fn: Callable, commands: List[Cmd] = None, params: Params= None, hidden:bool= False):
         super().__init__(name, params=params, hidden=hidden)
@@ -352,12 +353,13 @@ class Grp(BaseCmd):
             # look for groups or commands in this class and make them dataclass commands
             for method_name in dir(command):
                 method = getattr(command, method_name)
-                if isinstance(method, (Grp, Cmd)):
+                cmd = None
+                if isinstance(method, Cmd):
                     cmd = method.create_new_dataclass_cmd(method.name, method.fn, method.params, method.hidden, command)
-                    cmd.__doc__ = method.__doc__
-                    if hidden:
-                        cmd.hidden = hidden
-                    self.commands.append(cmd)
+                    if cmd:
+                        cmd.__doc__ = method.__doc__
+                        self.commands.append(cmd)
+
         else:
             if hidden:
                 command.hidden = hidden
@@ -390,7 +392,7 @@ class Grp(BaseCmd):
         namestr = f'\n{fg("green")}{self.name.title()}{style.RESET}\n'
         docstr = f'\n{fg("yellow")}\t{self.__doc__}{style.RESET}\n'
         usagestr = f'\n{fg("blue")}USAGE: {self.name} '
-        cmdstr = f'\n{fg("red")}Commands:{style.RESET}\n'
+        cmdstr = f'\n{fg("red")}Commands:{style.RESET}\n' if self.commands else ''
         grp_tbl = f'{fg("red")}| {"Name":<24} | {"Description":<52} |\n'
         grp_tbl += f'| {"-"*24} | {"-"*52} |\n'
         paramstr = ''
@@ -406,7 +408,6 @@ class Grp(BaseCmd):
                 if isinstance(p, Opt):
                     usagestr += f'{p.name}|{p.short_name} [value] '
                     cmd_tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
-                    attr = 'default'
                     cmd_tbl += f'{"[default: " + str(p.default) + "] " + str(p.help):<54} |\n'
                 if isinstance(p, Flg):
                     usagestr += f'{p.name}|{p.short_name} '
@@ -414,11 +415,11 @@ class Grp(BaseCmd):
                     cmd_tbl += f'{f"[flag] " + p.help:<54} |\n'
 
         usagestr += f'{style.RESET}\n'
-
         for c in self.commands:
             grp_tbl += f'{fg("red")}| {style.RESET}{c.name:<24} {fg("red")}| '
             grp_tbl += f'{style.RESET}{"".join(str(c.__doc__)[:50]):<52} {fg("red")}|\n'
         grp_tbl += f'{style.RESET}'
+        grp_tbl = grp_tbl if self.commands else ''
         self.help = namestr + docstr + usagestr + paramstr + cmd_tbl + cmdstr + grp_tbl
 
     def get_values(self, cmdl: list):
@@ -437,41 +438,44 @@ class Grp(BaseCmd):
                 self.invoke = cmdl[index]
                 self.cmdl = cmdl[index:]
                 break
-        if '--help' in cur_state:
+        if '--help' in cur_state or (len(cur_state) == 0 and all('--help' in c for c in self.cmdl)):
             self._print_help()
-        while len(cur_state) < len(self.params.order):
-            cur_state.append('')
-        for index in range(0, len(self.params.order)):
-            if isinstance(self.params.order[index], Arg):
-                if cur_state[index].startswith('-'):
-                    msg = f'An {"opt"!r} was found: {cur_state[index]!r}, '
-                    msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
-                    trace(msg, AssertionError, color='red')
-                if cur_state[index]:
-                    self.values.append(self.params.order[index].type(cur_state[index]))
-            if isinstance(self.params.order[index], Opt):
-                matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
-                if matches and len(matches) > 0:
-                    if self.params.order[index].multiple:
-                        match_list = [self.params.order[index].type(m[1]) for m in matches]
-                        self.values.append(match_list)
-                    else:
-                        self.values.append(self.params.order[index].type(matches[0][1]))
-                else:
-                    if self.params.order[index].required:
-                        msg = f'{self.params.order[index].name!r} is required'
+        if not self.invoke:
+            cur_state = self.cmdl
+        if hasattr(self, 'params') and hasattr(self.params, 'order'):
+            while len(cur_state) < len(self.params.order):
+                cur_state.append('')
+            for index in range(0, len(self.params.order)):
+                if isinstance(self.params.order[index], Arg):
+                    if cur_state[index].startswith('-'):
+                        msg = f'An {"opt"!r} was found: {cur_state[index]!r}, '
+                        msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
                         trace(msg, AssertionError, color='red')
-                    else:
-                        if self.params.order[index].default is None:
-                            self.values.append(None)
+                    if cur_state[index]:
+                        self.values.append(self.params.order[index].type(cur_state[index]))
+                if isinstance(self.params.order[index], Opt):
+                    matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
+                    if matches and len(matches) > 0:
+                        if self.params.order[index].multiple:
+                            match_list = [self.params.order[index].type(m[1]) for m in matches]
+                            self.values.append(match_list)
                         else:
-                            self.values.append(self.params.order[index].type(self.params.order[index].default))
-            if isinstance(self.params.order[index], Flg):
-                matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
-                if matches:
-                    self.values.append(True)
-                else:
-                    self.values.append(False)
+                            self.values.append(self.params.order[index].type(matches[0][1]))
+                    else:
+                        if self.params.order[index].required:
+                            msg = f'{self.params.order[index].name!r} is required'
+                            trace(msg, AssertionError, color='red')
+                        else:
+                            if self.params.order[index].default is None:
+                                self.values.append(None)
+                            else:
+                                self.values.append(self.params.order[index].type(self.params.order[index].default))
+                if isinstance(self.params.order[index], Flg):
+                    matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
+                    if matches:
+                        self.values.append(True)
+                    else:
+                        self.values.append(False)
 
 
     @classmethod
