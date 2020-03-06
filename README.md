@@ -69,7 +69,6 @@
         - [ cloc.utils.echo ](#utils_echo)
         - [ cloc.utils.trace ](#utils_trace)
         - [ cloc.utils.listattrs ](#utils_listattrs)
-        - [ cloc.utils.defaultattr ](#utils_defaultattr)
 - [ Advanced Usage Examples ](#examples)
     - [ Viewset Example ](#viewset_example)
     
@@ -547,11 +546,6 @@ prints the formatted string and calls `sys.exit(exit_code)` or raises the given 
 List the attributes and values of a given class object. If verbose is True, python defined attributes 
 will also be included.
 * Utilizes the echo util for formatted output
-
-<a name="utils_defaultattr"></a>
-##### `cloc.utils.defaultattr(cls: object, attribute: str, default: Any= None)`
-
-Return the value of the attribute if exists or set the default and return the attribute value
 
 <br>
 

@@ -24,7 +24,7 @@ class BaseType(object):
     basetype: Any
 
     def __init__(self, basetype: Any= None):
-        defaultattr(self, 'basetype', basetype)
+        self.basetype = basetype or str
 
     def __call__(self, value: str):
         """overload __call__ for converting to new type

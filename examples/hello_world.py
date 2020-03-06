@@ -1,9 +1,14 @@
-from cloc import cmd, grp
+from cloc import cmd, grp, flg, arg
+
 
 @grp('cli')
-def cli():
+@arg('name', type=str, help='name to print helloworld')
+@flg('--debug', '-d', help='debug mode')
+def cli(name: str, debug: bool):
     """cli group"""
-    pass
+    print(name)
+    if debug:
+        print('debug enabled')
 
 @cmd('hello-world')
 def hello_world():

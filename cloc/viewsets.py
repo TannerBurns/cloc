@@ -23,10 +23,7 @@ class GrpQueryset(BaseQueryset):
         super().__init__(model=kwargs)
 
     def query(self, cls: object= None):
-        if cls:
-            obj = cls
-        else:
-            obj = self
+        obj = cls or self
         for key, val in self.model.items():
             setattr(obj, key, val)
 
@@ -35,8 +32,8 @@ class GrpViewset(object):
     queryset: GrpQueryset
 
     def __init__(self, *args, **kwargs):
-        self.version = defaultattr(self, 'version', None)
-        self.queryset = defaultattr(self, 'queryset', GrpQueryset)(*args, **kwargs)
+        self.version = kwargs.pop('version', None)
+        self.queryset = kwargs.pop('queryset', GrpQueryset)(*args, **kwargs)
         self.queryset.query(self)
 
 
@@ -57,13 +54,13 @@ class ReqSessionViewset(GrpViewset, mixins.Version):
                  pool_connections: int= 16, pool_maxsize: int= 16,  raise_exception: bool= True, **kwargs):
         super().__init__(*args, **kwargs)
         if session:
-            self.session = defaultattr(self, 'session', session)
+            self.session = session
         else:
-            self.pool_connections = defaultattr(self, 'pool_connections', pool_connections)
-            self.pool_maxsize = defaultattr(self, 'pool_maxsize', pool_maxsize)
-            self.max_retries = defaultattr(self, 'max_retries', max_retries)
-            self.raise_exception = defaultattr(self, 'raise_exception', raise_exception)
-            self.session = defaultattr(self, 'session', requests.Session())
+            self.pool_connections = pool_connections
+            self.pool_maxsize = pool_maxsize
+            self.max_retries = max_retries
+            self.raise_exception = raise_exception
+            self.session = requests.Session()
             session_adapters = requests.adapters.HTTPAdapter(
                 pool_connections=self.pool_connections,
                 pool_maxsize=self.pool_maxsize,
