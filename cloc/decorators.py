@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Callable, Union
+from typing import Any
 
 from cloc.core import Arg, Cmd, Grp, Opt, Flg, Params
 

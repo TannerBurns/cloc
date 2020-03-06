@@ -4,21 +4,6 @@ import sys
 from colored import fg, style
 from typing import Any, Union
 
-def defaultattr(cls: object, attribute: str, default: Any= None):
-    """defaultattr - check is cls has attribute, if not set default value for attribute, then return attribute
-
-       Args:
-        cls {object} -- cls to get or update
-        attribute {str} -- attribute name to get or update
-        default {Any} -- default value to set if not found
-
-       Return:
-        method - attribute from cls
-    """
-    if not hasattr(cls, attribute):
-        setattr(cls, attribute, default)
-    return getattr(cls, attribute)
-
 def echo(message: Union[str, tuple, list, dict]= None, cls: object= None, attribute: str= None,
              list_delimiter: str = '\n', show_type: bool = False, indent: int= 4, color: str= None):
     """echoattr - print an attribute by name from the cls to stdout
