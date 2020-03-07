@@ -129,11 +129,6 @@ Commands:
 
 ```
 
-**TODO: Grp function should also get invoked and have parameters of its own**
-
-
-Until the above is in place. The current behavior does not allow options on subcommands but only the active command.
-
 ---
 
 <a name="parameters"></a>

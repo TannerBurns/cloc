@@ -75,10 +75,23 @@ class Params(object):
     order: List[Union[Arg, Opt, Flg]]
 
     def __init__(self, fn: Callable= None, order: List[Union[Arg, Opt, Flg]]=None):
+        """initialize fn and order for Params
+
+           Args:
+                fn {Callable} -- function  tied to Parameters
+                order {List[Union[Arg, Opt, Flg]]} -- params in order defined
+        """
         self.fn = fn
         self.order = order or []
 
-    def get_help(self, name: str):
+    def get_help(self, name: str) -> tuple:
+        """this method for Params will return a tuple of the usage string and parameter table (if exists)
+
+        Args:
+            name {str} -- the cmd or grp name calling get_help
+
+        returns tuple(usage, parameter table)
+        """
         usage = f'\n{fg("blue")}USAGE: {name} '
         params = ''
         tbl = ''
@@ -142,17 +155,16 @@ class BaseCmd(object):
             - an empty entry means there was an arg in place, this is indexed for double check later on
         """
         escape_dash = '\\-'
-        if hasattr(self, 'params'):
-            if hasattr(self.params, 'order'):
-                for p in reversed(self.params.order):
-                    rgx_pattern = ''
-                    if isinstance(p, Opt):
-                        rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
-                        rgx_pattern += f'-{p.short_name.replace("-", "")}) ([\S]*)'
-                    elif isinstance(p, Flg):
-                        rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
-                        rgx_pattern += f'-{p.short_name.replace("-", "")})'
-                    self.regex_patterns.insert(0, rgx_pattern)
+        if hasattr(self, 'params') and hasattr(self.params, 'order'):
+            for p in reversed(self.params.order):
+                rgx_pattern = ''
+                if isinstance(p, Opt):
+                    rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
+                    rgx_pattern += f'-{p.short_name.replace("-", "")}) ([\S]*)'
+                elif isinstance(p, Flg):
+                    rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
+                    rgx_pattern += f'-{p.short_name.replace("-", "")})'
+                self.regex_patterns.insert(0, rgx_pattern)
 
     def create_help(self):
         """create_help - a formatted and colored help string, can be overloaded for different formatting
@@ -216,17 +228,13 @@ class Cmd(BaseCmd):
             now command should have a self as first arg or this will override first arg
 
         """
-        cmdl = cmdl or sys.argv[1:]
-        self._parse(cmdl)
+        self._parse(cmdl or sys.argv[1:])
 
         # this should represent 'self' for the command about to start
         if self.dataclass:
             self.values.insert(0, self.dataclass)
 
-        if self.values:
-            self.fn(*self.values)
-        else:
-            self.fn()
+        return self.fn(*self.values) if self.values else self.fn()
 
     @classmethod
     def create_new_cmd(cls, name: str, fn: Callable, params: Params= None,
@@ -336,6 +344,8 @@ class Grp(BaseCmd):
         self.cmdl = cmdl or sys.argv[1:]
         self._parse(self.cmdl)
         self.fn(*self.values)
+
+        # check if command was found to invoke
         if self.invoke:
             cmd = self.get_command(self.invoke)
             if cmd:
@@ -366,7 +376,6 @@ class Grp(BaseCmd):
                 if isinstance(method, Cmd):
                     cmd = method.create_new_dataclass_cmd(method.name, method.fn, method.params, method.hidden, command)
                     if cmd:
-                        cmd.__doc__ = method.__doc__
                         self.commands.append(cmd)
 
         else:
