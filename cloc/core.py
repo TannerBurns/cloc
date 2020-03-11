@@ -281,25 +281,21 @@ class Cmd(BaseCmd):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches and len(matches) > 0:
                         if self.params.order[index].multiple:
-                            match_list = [self.params.order[index].type(m[1]) for m in matches]
-                            self.values.append(match_list)
+                            self.values.append([self.params.order[index].type(m[1]) for m in matches])
                         else:
                             self.values.append(self.params.order[index].type(matches[0][1]))
                     else:
                         if self.params.order[index].required:
                             msg = f'{self.params.order[index].name!r} is required'
                             trace(msg, AssertionError, color='red')
+                        if self.params.order[index].default is None:
+                            self.values.append(self.params.order[index].default)
                         else:
-                            if self.params.order[index].default is None:
-                                self.values.append(None)
-                            else:
-                                self.values.append(self.params.order[index].type(self.params.order[index].default))
+                            self.values.append(self.params.order[index].type(self.params.order[index].default))
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
-                    if matches:
-                        self.values.append(True)
-                    else:
-                        self.values.append(False)
+                    self.values.append(True) if matches else self.values.append(False)
+
 
 class Grp(BaseCmd):
     """Grp - Inherits from BaseCmd, this class will hold commands and invoked them and modify
@@ -458,25 +454,21 @@ class Grp(BaseCmd):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
                     if matches and len(matches) > 0:
                         if self.params.order[index].multiple:
-                            match_list = [self.params.order[index].type(m[1]) for m in matches]
-                            self.values.append(match_list)
+                            self.values.append([self.params.order[index].type(m[1]) for m in matches])
                         else:
                             self.values.append(self.params.order[index].type(matches[0][1]))
                     else:
                         if self.params.order[index].required:
                             msg = f'{self.params.order[index].name!r} is required'
                             trace(msg, AssertionError, color='red')
+                        if self.params.order[index].default is None:
+                            self.values.append(self.params.order[index].default)
                         else:
-                            if self.params.order[index].default is None:
-                                self.values.append(None)
-                            else:
-                                self.values.append(self.params.order[index].type(self.params.order[index].default))
+                            self.values.append(self.params.order[index].type(self.params.order[index].default))
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
-                    if matches:
-                        self.values.append(True)
-                    else:
-                        self.values.append(False)
+                    self.values.append(True) if matches else self.values.append(False)
+
 
 
     @classmethod
