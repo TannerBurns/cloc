@@ -75,15 +75,28 @@ class Params(object):
     order: List[Union[Arg, Opt, Flg]]
 
     def __init__(self, fn: Callable= None, order: List[Union[Arg, Opt, Flg]]=None):
+        """initialize fn and order for Params
+
+           Args:
+                fn {Callable} -- function  tied to Parameters
+                order {List[Union[Arg, Opt, Flg]]} -- params in order defined
+        """
         self.fn = fn
         self.order = order or []
 
-    def get_help(self, name: str):
+    def get_help(self, name: str) -> tuple:
+        """this method for Params will return a tuple of the usage string and parameter table (if exists)
+
+        Args:
+            name {str} -- the cmd or grp name calling get_help
+
+        returns tuple(usage, parameter table)
+        """
         usage = f'\n{fg("blue")}USAGE: {name} '
         params = ''
         tbl = ''
         if self.order:
-            params += f'\n{fg("red")}Parameters:{style.RESET}\n'
+            params += f'\n\n{fg("red")}Parameters:{style.RESET}\n'
             tbl += f'| {"Name":<18} | {"Short":<8} | {"Type":<16} | {"Help":<54} |\n'
             tbl += f'| {"-" * 18} | {"-" * 8} | {"-" * 16} | {"-" * 54} |\n'
             for p in self.order:
@@ -98,7 +111,7 @@ class Params(object):
                     usage += f'{p.name}|{p.short_name} '
                     tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
                     tbl += f'{f"[flag] " + p.help:<54} |\n'
-        usage += f'{style.RESET}\n'
+        usage += f'{style.RESET}'
         return usage, params + tbl
 
 
@@ -142,17 +155,16 @@ class BaseCmd(object):
             - an empty entry means there was an arg in place, this is indexed for double check later on
         """
         escape_dash = '\\-'
-        if hasattr(self, 'params'):
-            if hasattr(self.params, 'order'):
-                for p in reversed(self.params.order):
-                    rgx_pattern = ''
-                    if isinstance(p, Opt):
-                        rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
-                        rgx_pattern += f'-{p.short_name.replace("-", "")}) ([\S]*)'
-                    elif isinstance(p, Flg):
-                        rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
-                        rgx_pattern += f'-{p.short_name.replace("-", "")})'
-                    self.regex_patterns.insert(0, rgx_pattern)
+        if hasattr(self, 'params') and hasattr(self.params, 'order'):
+            for p in reversed(self.params.order):
+                rgx_pattern = ''
+                if isinstance(p, Opt):
+                    rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
+                    rgx_pattern += f'-{p.short_name.replace("-", "")}) ([\S]*)'
+                elif isinstance(p, Flg):
+                    rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
+                    rgx_pattern += f'-{p.short_name.replace("-", "")})'
+                self.regex_patterns.insert(0, rgx_pattern)
 
     def create_help(self):
         """create_help - a formatted and colored help string, can be overloaded for different formatting
@@ -216,17 +228,13 @@ class Cmd(BaseCmd):
             now command should have a self as first arg or this will override first arg
 
         """
-        cmdl = cmdl or sys.argv[1:]
-        self._parse(cmdl)
+        self._parse(cmdl or sys.argv[1:])
 
         # this should represent 'self' for the command about to start
         if self.dataclass:
             self.values.insert(0, self.dataclass)
 
-        if self.values:
-            self.fn(*self.values)
-        else:
-            self.fn()
+        return self.fn(*self.values) if self.values else self.fn()
 
     @classmethod
     def create_new_cmd(cls, name: str, fn: Callable, params: Params= None,
@@ -273,25 +281,21 @@ class Cmd(BaseCmd):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches and len(matches) > 0:
                         if self.params.order[index].multiple:
-                            match_list = [self.params.order[index].type(m[1]) for m in matches]
-                            self.values.append(match_list)
+                            self.values.append([self.params.order[index].type(m[1]) for m in matches])
                         else:
                             self.values.append(self.params.order[index].type(matches[0][1]))
                     else:
                         if self.params.order[index].required:
                             msg = f'{self.params.order[index].name!r} is required'
                             trace(msg, AssertionError, color='red')
+                        if self.params.order[index].default is None:
+                            self.values.append(self.params.order[index].default)
                         else:
-                            if self.params.order[index].default is None:
-                                self.values.append(None)
-                            else:
-                                self.values.append(self.params.order[index].type(self.params.order[index].default))
+                            self.values.append(self.params.order[index].type(self.params.order[index].default))
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
-                    if matches:
-                        self.values.append(True)
-                    else:
-                        self.values.append(False)
+                    self.values.append(True) if matches else self.values.append(False)
+
 
 class Grp(BaseCmd):
     """Grp - Inherits from BaseCmd, this class will hold commands and invoked them and modify
@@ -336,6 +340,8 @@ class Grp(BaseCmd):
         self.cmdl = cmdl or sys.argv[1:]
         self._parse(self.cmdl)
         self.fn(*self.values)
+
+        # check if command was found to invoke
         if self.invoke:
             cmd = self.get_command(self.invoke)
             if cmd:
@@ -366,7 +372,6 @@ class Grp(BaseCmd):
                 if isinstance(method, Cmd):
                     cmd = method.create_new_dataclass_cmd(method.name, method.fn, method.params, method.hidden, command)
                     if cmd:
-                        cmd.__doc__ = method.__doc__
                         self.commands.append(cmd)
 
         else:
@@ -404,13 +409,14 @@ class Grp(BaseCmd):
         grp_tbl = ''
         usage, params = self.params.get_help(self.name)
         if self.commands:
-            cmdstr += f'\n{fg("red")}Commands:{style.RESET}\n' if self.commands else ''
+            cmdstr += f'\n\n{fg("red")}Commands:{style.RESET}\n' if self.commands else ''
             grp_tbl += f'{fg("red")}| {"Name":<24} | {"Description":<52} |\n'
             grp_tbl += f'| {"-" * 24} | {"-" * 52} |\n'
             for c in self.commands:
                 grp_tbl += f'{fg("red")}| {style.RESET}{c.name:<24} {fg("red")}| '
                 grp_tbl += f'{style.RESET}{"".join(str(c.__doc__)[:50]):<52} {fg("red")}|\n'
             grp_tbl += f'{style.RESET}'
+        usage = usage + ' ' + '|'.join(self.get_command_names())
         self.help = namestr + doc + usage + params + cmdstr + grp_tbl
 
     def get_values(self, cmdl: list):
@@ -448,25 +454,21 @@ class Grp(BaseCmd):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
                     if matches and len(matches) > 0:
                         if self.params.order[index].multiple:
-                            match_list = [self.params.order[index].type(m[1]) for m in matches]
-                            self.values.append(match_list)
+                            self.values.append([self.params.order[index].type(m[1]) for m in matches])
                         else:
                             self.values.append(self.params.order[index].type(matches[0][1]))
                     else:
                         if self.params.order[index].required:
                             msg = f'{self.params.order[index].name!r} is required'
                             trace(msg, AssertionError, color='red')
+                        if self.params.order[index].default is None:
+                            self.values.append(self.params.order[index].default)
                         else:
-                            if self.params.order[index].default is None:
-                                self.values.append(None)
-                            else:
-                                self.values.append(self.params.order[index].type(self.params.order[index].default))
+                            self.values.append(self.params.order[index].type(self.params.order[index].default))
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
-                    if matches:
-                        self.values.append(True)
-                    else:
-                        self.values.append(False)
+                    self.values.append(True) if matches else self.values.append(False)
+
 
 
     @classmethod
