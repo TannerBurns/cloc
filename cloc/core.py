@@ -96,7 +96,7 @@ class Params(object):
         params = ''
         tbl = ''
         if self.order:
-            params += f'\n{fg("red")}Parameters:{style.RESET}\n'
+            params += f'\n\n{fg("red")}Parameters:{style.RESET}\n'
             tbl += f'| {"Name":<18} | {"Short":<8} | {"Type":<16} | {"Help":<54} |\n'
             tbl += f'| {"-" * 18} | {"-" * 8} | {"-" * 16} | {"-" * 54} |\n'
             for p in self.order:
@@ -111,7 +111,7 @@ class Params(object):
                     usage += f'{p.name}|{p.short_name} '
                     tbl += f'| {p.name:<18} | {p.short_name:<8} | {p.type.__name__:<16} | '
                     tbl += f'{f"[flag] " + p.help:<54} |\n'
-        usage += f'{style.RESET}\n'
+        usage += f'{style.RESET}'
         return usage, params + tbl
 
 
@@ -413,13 +413,14 @@ class Grp(BaseCmd):
         grp_tbl = ''
         usage, params = self.params.get_help(self.name)
         if self.commands:
-            cmdstr += f'\n{fg("red")}Commands:{style.RESET}\n' if self.commands else ''
+            cmdstr += f'\n\n{fg("red")}Commands:{style.RESET}\n' if self.commands else ''
             grp_tbl += f'{fg("red")}| {"Name":<24} | {"Description":<52} |\n'
             grp_tbl += f'| {"-" * 24} | {"-" * 52} |\n'
             for c in self.commands:
                 grp_tbl += f'{fg("red")}| {style.RESET}{c.name:<24} {fg("red")}| '
                 grp_tbl += f'{style.RESET}{"".join(str(c.__doc__)[:50]):<52} {fg("red")}|\n'
             grp_tbl += f'{style.RESET}'
+        usage = usage + ' ' + '|'.join(self.get_command_names())
         self.help = namestr + doc + usage + params + cmdstr + grp_tbl
 
     def get_values(self, cmdl: list):
