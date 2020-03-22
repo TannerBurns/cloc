@@ -271,12 +271,13 @@ class Cmd(BaseCmd):
                 cmdl.append('')
             for index in range(0, len(self.params.order)):
                 if isinstance(self.params.order[index], Arg):
-                    if cmdl[index].startswith('-'):
-                        msg = f'An {"opt"!r} was found: {cmdl[index]!r}, '
-                        msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
-                        trace(msg, AssertionError, color='red')
-                    if cmdl[index]:
-                        self.values.append(self.params.order[index].type(cmdl[index]))
+                    if len(cmdl) >= index+1 and len(self.params.order) >= index+1:
+                        if cmdl[index+1].startswith('-'):
+                            msg = f'An {"opt"!r} was found: {cmdl[index+1]!r}, '
+                            msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
+                            trace(msg, AssertionError, color='red')
+                        if cmdl[index+1]:
+                            self.values.append(self.params.order[index+1].type(cmdl[index+1]))
                 if isinstance(self.params.order[index], Opt):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     if matches and len(matches) > 0:
