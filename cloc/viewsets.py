@@ -2,7 +2,7 @@ import json
 import requests
 
 from cloc import mixins, arg, opt, cmd
-from cloc.utils import defaultattr, echo
+from cloc.utils import echo
 from cloc.types import Url, Json
 
 from typing import Any, Union

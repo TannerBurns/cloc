@@ -6,6 +6,7 @@ from typing import Any, Callable, List, Union
 
 from cloc.utils import trace, echo
 
+
 class BaseArg(object):
     """BaseArg - Base implementation of an argument found on the cli
 
@@ -25,11 +26,14 @@ class BaseArg(object):
         self.type = type
         self.help = help
 
+
 class Arg(BaseArg):
     """Arg - A copy of BaseArg used for more explicit naming
     """
+
     def __init__(self, name: str, type: Any = None, help: str = None):
         super().__init__(name, type, help)
+
 
 class Opt(BaseArg):
     """Opt - Inherits from BaseArg but also adds a short name, default, multiple, and required attribute
@@ -48,13 +52,14 @@ class Opt(BaseArg):
     multiple: bool
     required: bool
 
-    def __init__(self, name: str, short_name: str, type: Any = str, default: Any= None,
-                 multiple: bool= False, required: bool= False, help: str = None):
+    def __init__(self, name: str, short_name: str, type: Any = str, default: Any = None,
+                 multiple: bool = False, required: bool = False, help: str = None):
         super().__init__(name, type, help)
         self.short_name = short_name
         self.multiple = multiple
         self.default = default
         self.required = required
+
 
 class Flg(BaseArg):
     """Flg - Inherits from BaseArg (very similar to an Opt) but adds a short name and always sets the type to bool
@@ -68,13 +73,14 @@ class Flg(BaseArg):
         super().__init__(name, bool, help)
         self.short_name = short_name
 
+
 class Params(object):
     """Params - holds the order for parameters given to cmd or grp
     """
     fn: Callable
     order: List[Union[Arg, Opt, Flg]]
 
-    def __init__(self, fn: Callable= None, order: List[Union[Arg, Opt, Flg]]=None):
+    def __init__(self, fn: Callable = None, order: List[Union[Arg, Opt, Flg]] = None):
         """initialize fn and order for Params
 
            Args:
@@ -135,7 +141,7 @@ class BaseCmd(object):
     regex_patterns: list
     values: list
 
-    def __init__(self, name: str, params: Params = None, hidden: bool= False):
+    def __init__(self, name: str, params: Params = None, hidden: bool = False):
         self.name = name
         self.params = params
         self.hidden = hidden
@@ -158,10 +164,7 @@ class BaseCmd(object):
         if hasattr(self, 'params') and hasattr(self.params, 'order'):
             for p in reversed(self.params.order):
                 rgx_pattern = ''
-                if isinstance(p, Opt):
-                    rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
-                    rgx_pattern += f'-{p.short_name.replace("-", "")}) ([\S]*)'
-                elif isinstance(p, Flg):
+                if isinstance(p, Flg):
                     rgx_pattern += f'(-{f"{escape_dash}"}{p.name.replace("-", "")}|'
                     rgx_pattern += f'-{p.short_name.replace("-", "")})'
                 self.regex_patterns.insert(0, rgx_pattern)
@@ -195,6 +198,7 @@ class BaseCmd(object):
         self.create_help()
         self.create_regex_patterns()
         self.get_values(cmdl)
+
 
 class Cmd(BaseCmd):
     """Cmd - Inherits from BaseCmd, will implement a start method to invoke the command
@@ -237,13 +241,13 @@ class Cmd(BaseCmd):
         return self.fn(*self.values) if self.values else self.fn()
 
     @classmethod
-    def create_new_cmd(cls, name: str, fn: Callable, params: Params= None,
-                          hidden: bool= False):
+    def create_new_cmd(cls, name: str, fn: Callable, params: Params = None,
+                       hidden: bool = False):
         return cls(name, fn, params=params, hidden=hidden)
 
     @classmethod
-    def create_new_dataclass_cmd(cls, name: str, fn: Callable, params: Params= None,
-                                 hidden: bool= False, dataclass: object= None):
+    def create_new_dataclass_cmd(cls, name: str, fn: Callable, params: Params = None,
+                                 hidden: bool = False, dataclass: object = None):
         """create_new_dataclass_cmd - get a new cls of Cmd that is tied to another class
 
            Args:
@@ -271,28 +275,33 @@ class Cmd(BaseCmd):
                 cmdl.append('')
             for index in range(0, len(self.params.order)):
                 if isinstance(self.params.order[index], Arg):
-                    if len(cmdl) >= index+1:
-                        if cmdl[index+1].startswith('-'):
-                            msg = f'An {"opt"!r} was found: {cmdl[index+1]!r}, '
-                            msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
-                            trace(msg, AssertionError, color='red')
-                        if cmdl[index+1]:
-                            self.values.append(self.params.order[index].type(cmdl[index+1]))
+                    if cmdl[index].startswith('-'):
+                        msg = f'An {"opt"!r} was found: {cmdl[index]!r}, '
+                        msg += f'instead of type {"arg"!r}. Order of cmd parameters might be incorrect.'
+                        trace(msg, AssertionError, color='red')
+                    if len(cmdl) >= index + 1 and cmdl[index + 1]:
+                        self.values.append(self.params.order[index].type(cmdl[index + 1]))
                 if isinstance(self.params.order[index], Opt):
-                    matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
-                    if matches and len(matches) > 0:
+                    values = []
+                    for cmdl_index in range(0, len(cmdl)):
+                        if cmdl[cmdl_index] == self.params.order[index].name or \
+                                cmdl[cmdl_index] == self.params.order[index].short_name:
+                            if len(cmdl) >= cmdl_index + 1 and cmdl[cmdl_index + 1]:
+                                values.append(self.params.order[index].type(cmdl[cmdl_index + 1]))
+
+                    if self.params.order[index].required and not values:
+                        msg = f'{self.params.order[index].name!r} is required'
+                        trace(msg, AssertionError, color='red')
+
+                    if len(values) > 0:
                         if self.params.order[index].multiple:
-                            self.values.append([self.params.order[index].type(m[1]) for m in matches])
+                            self.values.append(values)
                         else:
-                            self.values.append(self.params.order[index].type(matches[0][1]))
-                    else:
-                        if self.params.order[index].required:
-                            msg = f'{self.params.order[index].name!r} is required'
-                            trace(msg, AssertionError, color='red')
-                        if self.params.order[index].default is None:
-                            self.values.append(self.params.order[index].default)
-                        else:
-                            self.values.append(self.params.order[index].type(self.params.order[index].default))
+                            self.values.append(values[0])
+                    elif self.params.order[index].default is None:
+                        self.values.append(self.params.order[index].default)
+                    elif self.params.order[index].default:
+                        self.values.append(self.params.order[index].type(self.params.order[index].default))
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cmdl))
                     self.values.append(True) if matches else self.values.append(False)
@@ -314,9 +323,10 @@ class Grp(BaseCmd):
     fn: Callable
     params: Params
     dataclass: object
-    invoke: str # this is here in the case you want to manually set a cmd to call in self.commands
+    invoke: str  # this is here in the case you want to manually set a cmd to call in self.commands
 
-    def __init__(self, name: str, fn: Callable, commands: List[Cmd] = None, params: Params= None, hidden:bool= False):
+    def __init__(self, name: str, fn: Callable, commands: List[Cmd] = None, params: Params = None,
+                 hidden: bool = False):
         super().__init__(name, params=params, hidden=hidden)
         self.commands = commands or []
         self.fn = fn
@@ -324,7 +334,7 @@ class Grp(BaseCmd):
         self.__doc__ = fn.__doc__
         self.invoke = ''
 
-    def __call__(self, cmdl: list= None):
+    def __call__(self, cmdl: list = None):
         """__call__ overloading call method to make a Grp hold states and shift the cmdl to another Grp
 
            Args:
@@ -353,7 +363,7 @@ class Grp(BaseCmd):
         else:
             self._print_help()
 
-    def add_command(self, command: BaseCmd, hidden:bool= None):
+    def add_command(self, command: BaseCmd, hidden: bool = None):
         """add_command - add a new command to the Grp. A command can either be a Cmd or Grp.
             Can also override or set hidden state
 
@@ -452,27 +462,31 @@ class Grp(BaseCmd):
                     if cur_state[index]:
                         self.values.append(self.params.order[index].type(cur_state[index]))
                 if isinstance(self.params.order[index], Opt):
-                    matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
-                    if matches and len(matches) > 0:
+                    values = []
+                    for cmdl_index in range(0, len(cmdl)):
+                        if cmdl[cmdl_index] == self.params.order[index].name or \
+                                cmdl[cmdl_index] == self.params.order[index].short_name:
+                            if len(cmdl) >= cmdl_index + 1 and cmdl[cmdl_index + 1]:
+                                values.append(self.params.order[index].type(cmdl[cmdl_index + 1]))
+
+                    if self.params.order[index].required and not values:
+                        msg = f'{self.params.order[index].name!r} is required'
+                        trace(msg, AssertionError, color='red')
+
+                    if len(values) > 0:
                         if self.params.order[index].multiple:
-                            self.values.append([self.params.order[index].type(m[1]) for m in matches])
+                            self.values.append(values)
                         else:
-                            self.values.append(self.params.order[index].type(matches[0][1]))
-                    else:
-                        if self.params.order[index].required:
-                            msg = f'{self.params.order[index].name!r} is required'
-                            trace(msg, AssertionError, color='red')
-                        if self.params.order[index].default is None:
-                            self.values.append(self.params.order[index].default)
-                        else:
-                            self.values.append(self.params.order[index].type(self.params.order[index].default))
+                            self.values.append(values[0])
+                    elif self.params.order[index].default is None:
+                        self.values.append(self.params.order[index].default)
+                    elif self.params.order[index].default:
+                        self.values.append(self.params.order[index].type(self.params.order[index].default))
                 if isinstance(self.params.order[index], Flg):
                     matches = re.findall(self.regex_patterns[index], ' '.join(cur_state))
                     self.values.append(True) if matches else self.values.append(False)
 
-
-
     @classmethod
     def create_new_grp(cls, name: str, fn: Callable, commands: List[Cmd] = None,
-                       params: Params= None, hidden:bool= False):
+                       params: Params = None, hidden: bool = False):
         return cls(name, fn, commands=commands, params=params, hidden=hidden)
